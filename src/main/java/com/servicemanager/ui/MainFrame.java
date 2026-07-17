@@ -132,17 +132,23 @@ public class MainFrame extends JFrame {
         table.getColumnModel().getColumn(2).setMinWidth(100);
         table.getColumnModel().getColumn(3).setMaxWidth(60);
         table.getColumnModel().getColumn(3).setMinWidth(60);
-        table.getColumnModel().getColumn(4).setMinWidth(120);
-        table.getColumnModel().getColumn(5).setMaxWidth(80);
-        table.getColumnModel().getColumn(5).setMinWidth(80);
+        table.getColumnModel().getColumn(4).setMaxWidth(50);
+        table.getColumnModel().getColumn(4).setMinWidth(50);
+        table.getColumnModel().getColumn(5).setMinWidth(70);
+        table.getColumnModel().getColumn(6).setMinWidth(120);
+        table.getColumnModel().getColumn(7).setMaxWidth(80);
+        table.getColumnModel().getColumn(7).setMinWidth(80);
 
         // 服务名列渲染（分类色标）
         table.getColumnModel().getColumn(1).setCellRenderer(new NameRenderer());
+        // 目录列渲染 + 编辑
+        table.getColumnModel().getColumn(4).setCellRenderer(new DirButtonRenderer());
+        table.getColumnModel().getColumn(4).setCellEditor(new DirButtonEditor());
         // 状态列渲染
-        table.getColumnModel().getColumn(4).setCellRenderer(new StatusRenderer());
+        table.getColumnModel().getColumn(6).setCellRenderer(new StatusRenderer());
         // 操作列渲染 + 编辑
-        table.getColumnModel().getColumn(5).setCellRenderer(new ButtonRenderer());
-        table.getColumnModel().getColumn(5).setCellEditor(new ButtonEditor());
+        table.getColumnModel().getColumn(7).setCellRenderer(new ButtonRenderer());
+        table.getColumnModel().getColumn(7).setCellEditor(new ButtonEditor());
 
         // 操作列单击直接触发（不用双击进入编辑再点按钮）
         table.addMouseListener(new MouseAdapter() {
@@ -151,7 +157,7 @@ public class MainFrame extends JFrame {
                 if (e.getButton() != MouseEvent.BUTTON1) return;
                 int col = table.columnAtPoint(e.getPoint());
                 int row = table.rowAtPoint(e.getPoint());
-                if (col == 5 && row >= 0) {
+                if (col == 7 && row >= 0) {
                     ServiceInfo svc = tableModel.getServiceAt(row);
                     boolean stopping = "RUNNING".equals(svc.getStatus());
                     int confirm = JOptionPane.showConfirmDialog(MainFrame.this,
@@ -601,7 +607,7 @@ public class MainFrame extends JFrame {
     //  TableModel
     // ==========================================
     static class ServiceTableModel extends AbstractTableModel {
-        private final String[] columns = {"#", "服务名", "类型", "端口", "状态", "操作"};
+        private final String[] columns = {"#", "服务名", "类型", "端口", "目录", "版本", "状态", "操作"};
         private final List<ServiceInfo> list;
 
         ServiceTableModel(List<ServiceInfo> list) {
@@ -620,15 +626,17 @@ public class MainFrame extends JFrame {
                 case 1: return svc;
                 case 2: return svc.getType().getLabel();
                 case 3: return svc.getPort() > 0 ? String.valueOf(svc.getPort()) : "-";
-                case 4: return svc; // 传整个对象，StatusRenderer 需要 startTime
-                case 5: return "RUNNING".equals(svc.getStatus()) ? "停止" : "启动";
+                case 4: return "📂";
+                case 5: return svc.getVersion() != null ? svc.getVersion() : "-";
+                case 6: return svc;
+                case 7: return "RUNNING".equals(svc.getStatus()) ? "停止" : "启动";
                 default: return "";
             }
         }
 
         @Override
         public boolean isCellEditable(int row, int col) {
-            return col == 5;
+            return col == 4 || col == 7;
         }
 
         public ServiceInfo getServiceAt(int row) {
@@ -728,6 +736,58 @@ public class MainFrame extends JFrame {
                     label.setForeground(COLOR_UNKNOWN);
             }
             return label;
+        }
+    }
+
+    // ==========================================
+    //  目录列按钮 — 打开资源管理器
+    // ==========================================
+    static class DirButtonRenderer extends JButton implements TableCellRenderer {
+        @Override
+        public Component getTableCellRendererComponent(JTable table, Object value,
+                                                       boolean isSelected, boolean hasFocus,
+                                                       int row, int col) {
+            setText(String.valueOf(value));
+            setEnabled(true);
+            setToolTipText("打开目录");
+            return this;
+        }
+    }
+
+    class DirButtonEditor extends DefaultCellEditor {
+        private JButton button;
+        private int currentRow;
+
+        DirButtonEditor() {
+            super(new JCheckBox());
+            button = new JButton("📂");
+            button.setOpaque(true);
+            button.addActionListener(e -> fireEditingStopped());
+        }
+
+        @Override
+        public Component getTableCellEditorComponent(JTable table, Object value,
+                                                     boolean isSelected, int row, int col) {
+            button.setText(String.valueOf(value));
+            currentRow = row;
+            return button;
+        }
+
+        @Override
+        public Object getCellEditorValue() {
+            return "📂";
+        }
+
+        @Override
+        public boolean stopCellEditing() {
+            ServiceInfo svc = tableModel.getServiceAt(currentRow);
+            String dir = svc.getWorkingDir();
+            if (dir != null && !dir.isEmpty()) {
+                try {
+                    Runtime.getRuntime().exec("explorer " + dir);
+                } catch (Exception ex) { /* ignore */ }
+            }
+            return super.stopCellEditing();
         }
     }
 
