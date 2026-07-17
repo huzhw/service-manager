@@ -15,6 +15,8 @@ import javax.swing.table.AbstractTableModel;
 import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.TableCellRenderer;
 import java.awt.*;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import java.text.SimpleDateFormat;
 import java.util.Comparator;
 import java.util.Date;
@@ -122,6 +124,22 @@ public class MainFrame extends JFrame {
         // 操作列渲染 + 编辑
         table.getColumnModel().getColumn(5).setCellRenderer(new ButtonRenderer());
         table.getColumnModel().getColumn(5).setCellEditor(new ButtonEditor());
+
+        // 右键菜单
+        JPopupMenu popupMenu = buildPopupMenu();
+        table.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mousePressed(MouseEvent e)  { if (e.isPopupTrigger()) showPopup(e); }
+            @Override
+            public void mouseReleased(MouseEvent e) { if (e.isPopupTrigger()) showPopup(e); }
+            private void showPopup(MouseEvent e) {
+                int row = table.rowAtPoint(e.getPoint());
+                if (row >= 0) {
+                    table.setRowSelectionInterval(row, row);
+                    popupMenu.show(table, e.getX(), e.getY());
+                }
+            }
+        });
 
         // 斑马纹 + 隐藏网格
         table.setDefaultRenderer(Object.class, new ZebraRenderer());
@@ -254,6 +272,106 @@ public class MainFrame extends JFrame {
             // 自动滚到底部
             logArea.setCaretPosition(logArea.getDocument().getLength());
         });
+    }
+
+    // ==========================================
+    //  右键菜单
+    // ==========================================
+    private JPopupMenu buildPopupMenu() {
+        JPopupMenu menu = new JPopupMenu();
+
+        JMenuItem startItem = new JMenuItem("▶ 启动");
+        JMenuItem stopItem  = new JMenuItem("■ 停止");
+        JMenuItem detailItem = new JMenuItem("ℹ 查看详情");
+
+        menu.add(startItem);
+        menu.add(stopItem);
+        menu.addSeparator();
+        menu.add(detailItem);
+
+        menu.addPopupMenuListener(new javax.swing.event.PopupMenuListener() {
+            @Override
+            public void popupMenuWillBecomeVisible(javax.swing.event.PopupMenuEvent e) {
+                int row = table.getSelectedRow();
+                if (row >= 0) {
+                    ServiceInfo svc = tableModel.getServiceAt(row);
+                    boolean running = "RUNNING".equals(svc.getStatus());
+                    startItem.setEnabled(!running);
+                    stopItem.setEnabled(running);
+                }
+            }
+            @Override public void popupMenuWillBecomeInvisible(javax.swing.event.PopupMenuEvent e) {}
+            @Override public void popupMenuCanceled(javax.swing.event.PopupMenuEvent e) {}
+        });
+
+        startItem.addActionListener(e -> {
+            int row = table.getSelectedRow();
+            if (row >= 0) triggerSingleAction(tableModel.getServiceAt(row), false);
+        });
+        stopItem.addActionListener(e -> {
+            int row = table.getSelectedRow();
+            if (row >= 0) triggerSingleAction(tableModel.getServiceAt(row), true);
+        });
+        detailItem.addActionListener(e -> {
+            int row = table.getSelectedRow();
+            if (row >= 0) showDetailDialog(tableModel.getServiceAt(row));
+        });
+
+        return menu;
+    }
+
+    private void triggerSingleAction(ServiceInfo svc, boolean stopping) {
+        new Thread(() -> {
+            ServiceController ctrl = getController(svc);
+            if (stopping) {
+                setStatusText("正在停止: " + svc.getName());
+                appendLog("← 停止 " + svc.getName() + " ...");
+                boolean ok = ctrl.stop(svc);
+                if (ok) svc.setStartTime(0);
+                appendLog(ok ? "  ✓ " + svc.getName() + " 已停止"
+                             : "  ✗ " + svc.getName() + " 停止失败");
+            } else {
+                setStatusText("正在启动: " + svc.getName());
+                appendLog("→ 启动 " + svc.getName() + " ...");
+                boolean ok = ctrl.start(svc);
+                if (ok) svc.setStartTime(System.currentTimeMillis());
+                appendLog(ok ? "  ✓ " + svc.getName() + " 启动成功"
+                             : "  ✗ " + svc.getName() + " 启动失败");
+            }
+            try { Thread.sleep(800); } catch (InterruptedException ex) { Thread.currentThread().interrupt(); }
+            refreshAllStatus();
+        }).start();
+    }
+
+    private void showDetailDialog(ServiceInfo svc) {
+        String statusText = svc.getStatus();
+        if ("RUNNING".equals(statusText) && svc.getStartTime() > 0) {
+            statusText = "运行中 (" + formatDuration(svc.getStartTime()) + ")";
+        }
+
+        String info = String.format(
+                "服务名：%s\n类型：%s\n分类：%s\n端口：%s\n状态：%s\nPID：%s\n" +
+                "标识：%s\n工作目录：%s\n进程名：%s",
+                svc.getName(), svc.getType().getLabel(), svc.getCategory(),
+                svc.getPort() > 0 ? String.valueOf(svc.getPort()) : "-",
+                statusText,
+                svc.getPid() > 0 ? String.valueOf(svc.getPid()) : "-",
+                svc.getIdentifier(),
+                svc.getWorkingDir() != null ? svc.getWorkingDir() : "-",
+                svc.getProcessName() != null ? svc.getProcessName() : "-");
+
+        JOptionPane.showMessageDialog(this, info,
+                svc.getName() + " — 详情", JOptionPane.INFORMATION_MESSAGE);
+    }
+
+    static String formatDuration(long startTimeMs) {
+        if (startTimeMs <= 0) return "";
+        long elapsed = System.currentTimeMillis() - startTimeMs;
+        if (elapsed < 60_000) return (elapsed / 1000) + "s";
+        else if (elapsed < 3_600_000) return (elapsed / 60_000) + "m";
+        long hours = elapsed / 3_600_000;
+        long mins = (elapsed % 3_600_000) / 60_000;
+        return hours + "h " + mins + "m";
     }
 
     // ==========================================
@@ -406,7 +524,7 @@ public class MainFrame extends JFrame {
                 case 1: return svc;
                 case 2: return svc.getType().getLabel();
                 case 3: return svc.getPort() > 0 ? String.valueOf(svc.getPort()) : "-";
-                case 4: return svc.getStatus();
+                case 4: return svc; // 传整个对象，StatusRenderer 需要 startTime
                 case 5: return "RUNNING".equals(svc.getStatus()) ? "停止" : "启动";
                 default: return "";
             }
@@ -498,11 +616,25 @@ public class MainFrame extends JFrame {
                                                        int row, int col) {
             JLabel label = (JLabel) super.getTableCellRendererComponent(
                     table, value, isSelected, hasFocus, row, col);
-            String status = String.valueOf(value);
             label.setHorizontalAlignment(SwingConstants.CENTER);
+
+            String status;
+            ServiceInfo svc = null;
+            if (value instanceof ServiceInfo) {
+                svc = (ServiceInfo) value;
+                status = svc.getStatus();
+            } else {
+                status = String.valueOf(value);
+            }
+
             switch (status) {
                 case "RUNNING":
-                    label.setText("● 运行中");
+                    if (svc != null && svc.getStartTime() > 0) {
+                        String dur = formatDuration(svc.getStartTime());
+                        label.setText("● 运行中 " + dur);
+                    } else {
+                        label.setText("● 运行中");
+                    }
                     label.setForeground(COLOR_RUNNING);
                     break;
                 case "STOPPED":
@@ -515,6 +647,10 @@ public class MainFrame extends JFrame {
                     break;
                 case "STOPPING":
                     label.setText("◐ 停止中");
+                    label.setForeground(new Color(0xFF, 0x98, 0x00));
+                    break;
+                case "PORT_UNREACHABLE":
+                    label.setText("⚠ 端口不通");
                     label.setForeground(new Color(0xFF, 0x98, 0x00));
                     break;
                 default:
