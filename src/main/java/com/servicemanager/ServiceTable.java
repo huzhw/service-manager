@@ -54,7 +54,7 @@ public class ServiceTable extends TableView<ServiceInfo> {
 
         TableColumn<ServiceInfo, String> nameCol = new TableColumn<>("服务名");
         nameCol.setCellValueFactory(new PropertyValueFactory<>("name"));
-        nameCol.setPrefWidth(140);
+        nameCol.setPrefWidth(120);
         nameCol.setCellFactory(col -> new TableCell<ServiceInfo, String>() {
             @Override
             protected void updateItem(String item, boolean empty) {
@@ -65,8 +65,8 @@ public class ServiceTable extends TableView<ServiceInfo> {
                 } else {
                     ServiceInfo svc = getTableView().getItems().get(getIndex());
                     Color catColor = CAT_COLORS.getOrDefault(svc.getCategory(), COLOR_UNKNOWN);
-                    Circle dot = new Circle(4, catColor);
-                    setGraphic(new HBox(6, dot, new Label(item)));
+                    Circle dot = new Circle(3, catColor);
+                    setGraphic(new HBox(4, dot, new Label(item)));
                     setText(null);
                 }
             }
@@ -74,16 +74,18 @@ public class ServiceTable extends TableView<ServiceInfo> {
 
         TableColumn<ServiceInfo, String> typeCol = new TableColumn<>("类型");
         typeCol.setCellValueFactory(cell -> new SimpleStringProperty(cell.getValue().getType().getLabel()));
-        typeCol.setPrefWidth(100);
+        typeCol.setPrefWidth(80);
 
         TableColumn<ServiceInfo, String> portCol = new TableColumn<>("端口");
         portCol.setCellValueFactory(cell -> new SimpleStringProperty(
                 cell.getValue().getPort() > 0 ? String.valueOf(cell.getValue().getPort()) : "-"));
-        portCol.setPrefWidth(60);
+        portCol.setPrefWidth(45);
         // center alignment handled by cell factory
 
         TableColumn<ServiceInfo, Void> dirCol = new TableColumn<>("目录");
-        dirCol.setPrefWidth(50);
+        dirCol.setPrefWidth(45);
+        dirCol.setMinWidth(45);
+        dirCol.setMaxWidth(45);
         dirCol.setCellFactory(col -> new TableCell<ServiceInfo, Void>() {
             private final Button btn = new Button("📂");
             {
@@ -114,11 +116,11 @@ public class ServiceTable extends TableView<ServiceInfo> {
         TableColumn<ServiceInfo, String> verCol = new TableColumn<>("版本");
         verCol.setCellValueFactory(cell -> new SimpleStringProperty(
                 cell.getValue().getVersion() != null ? cell.getValue().getVersion() : "-"));
-        verCol.setPrefWidth(70);
+        verCol.setPrefWidth(55);
 
         TableColumn<ServiceInfo, String> statusCol = new TableColumn<>("状态");
         statusCol.setCellValueFactory(cell -> new SimpleStringProperty(cell.getValue().getStatus()));
-        statusCol.setPrefWidth(100);
+        statusCol.setPrefWidth(85);
         statusCol.setCellFactory(col -> new TableCell<ServiceInfo, String>() {
             @Override
             protected void updateItem(String item, boolean empty) {
@@ -149,12 +151,12 @@ public class ServiceTable extends TableView<ServiceInfo> {
         });
 
         TableColumn<ServiceInfo, Void> actionCol = new TableColumn<>("操作");
-        actionCol.setPrefWidth(65);
+        actionCol.setPrefWidth(55);
         actionCol.setCellFactory(col -> new TableCell<ServiceInfo, Void>() {
             private final Button btn = new Button();
             {
                 btn.getStyleClass().add("action-btn");
-                btn.setStyle("-fx-font-size: 11px; -fx-padding: 3 8 3 8; -fx-background-radius: 3;");
+                btn.setStyle("-fx-font-size: 10px; -fx-padding: 2 6 2 6; -fx-background-radius: 3;");
             }
             @Override
             protected void updateItem(Void item, boolean empty) {

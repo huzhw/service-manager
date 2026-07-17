@@ -61,8 +61,8 @@
 /* === Toolbar === */
 .toolbar {
     -fx-background-color: -bg-surface;
-    -fx-padding: 14 24 14 24;
-    -fx-spacing: 10;
+    -fx-padding: 10 20 10 20;
+    -fx-spacing: 8;
     -fx-border-color: transparent transparent -border transparent;
     -fx-border-width: 0 0 1 0;
 }
@@ -104,6 +104,7 @@
     -fx-background-color: -bg-card;
     -fx-table-cell-border-color: transparent;
     -fx-padding: 0;
+    -fx-font-size: 11px;
 }
 
 .table-view .column-header-background {
@@ -113,13 +114,13 @@
 
 .table-view .column-header {
     -fx-background-color: transparent;
-    -fx-padding: 12 8 12 8;
+    -fx-padding: 6 6 6 6;
 }
 
 .table-view .column-header .label {
     -fx-text-fill: -text-secondary;
     -fx-font-weight: bold;
-    -fx-font-size: 11px;
+    -fx-font-size: 10px;
 }
 
 .table-view .table-row-cell {
@@ -142,23 +143,24 @@
 }
 
 .table-view .table-cell {
-    -fx-padding: 10 8 10 8;
+    -fx-padding: 5 6 5 6;
     -fx-text-fill: -text-primary;
+    -fx-font-size: 11px;
 }
 
 /* Status badge */
 .status-badge {
-    -fx-font-size: 11px;
+    -fx-font-size: 10px;
     -fx-font-weight: bold;
-    -fx-padding: 3 9 3 9;
-    -fx-background-radius: 10;
+    -fx-padding: 2 7 2 7;
+    -fx-background-radius: 8;
 }
 
 /* Action button */
 .action-btn {
-    -fx-font-size: 11px;
+    -fx-font-size: 10px;
     -fx-font-weight: bold;
-    -fx-padding: 3 10 3 10;
+    -fx-padding: 2 8 2 8;
     -fx-background-radius: 3;
     -fx-cursor: hand;
     -fx-background-color: -accent;
@@ -208,9 +210,9 @@
 .dir-btn {
     -fx-background-color: transparent;
     -fx-text-fill: -accent;
-    -fx-font-size: 15px;
+    -fx-font-size: 13px;
     -fx-cursor: hand;
-    -fx-padding: 2 8 2 8;
+    -fx-padding: 1 6 1 6;
     -fx-background-radius: 4;
 }
 .dir-btn:hover { -fx-background-color: #ecf5ff; }
@@ -400,16 +402,4 @@
     -fx-text-fill: -text-secondary;
     -fx-font-size: 11px;
     -fx-padding: 4 0 0 0;
-}
-
-/* === Docker Panel === */
-.docker-card {
-    -fx-background-color: -bg-card;
-    -fx-border-color: -border;
-    -fx-border-width: 1;
-    -fx-border-radius: 8;
-    -fx-background-radius: 8;
-    -fx-padding: 14 20 14 20;
-    -fx-spacing: 10;
-    -fx-min-width: 600;
 }
