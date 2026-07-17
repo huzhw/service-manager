@@ -246,3 +246,158 @@
     -fx-background-radius: 5;
     -fx-padding: 7 20 7 20;
 }
+
+/* === Version Panel Cards === */
+.version-card {
+    -fx-background-color: -bg-card;
+    -fx-border-color: -border;
+    -fx-border-width: 1;
+    -fx-border-radius: 8;
+    -fx-background-radius: 8;
+    -fx-padding: 16 20 16 20;
+    -fx-spacing: 12;
+    -fx-min-width: 600;
+}
+
+.card-title {
+    -fx-font-size: 15px;
+    -fx-font-weight: bold;
+    -fx-text-fill: -text-primary;
+}
+
+/* === Version Chips === */
+.version-chip {
+    -fx-background-color: #e8e8e8;
+    -fx-text-fill: #303133;
+    -fx-font-size: 12px;
+    -fx-padding: 5 14 5 14;
+    -fx-background-radius: 14;
+    -fx-border-color: #cccccc;
+    -fx-border-width: 1;
+    -fx-border-radius: 14;
+    -fx-cursor: hand;
+}
+.version-chip:hover {
+    -fx-background-color: #dddddd;
+}
+.version-chip.active {
+    -fx-background-color: -accent;
+    -fx-text-fill: white;
+    -fx-border-color: -accent;
+    -fx-font-weight: bold;
+}
+.version-chip.active:hover {
+    -fx-background-color: -accent-hover;
+}
+
+/* === Port Tool Cards === */
+.port-card {
+    -fx-background-color: -bg-card;
+    -fx-border-color: -border;
+    -fx-border-width: 1;
+    -fx-border-radius: 8;
+    -fx-background-radius: 8;
+    -fx-padding: 14 20 14 20;
+    -fx-spacing: 10;
+    -fx-min-width: 600;
+}
+
+.port-chip {
+    -fx-background-color: #e8e8e8;
+    -fx-text-fill: -text-primary;
+    -fx-font-size: 11px;
+    -fx-padding: 4 12 4 12;
+    -fx-background-radius: 10;
+    -fx-border-color: #cccccc;
+    -fx-border-width: 1;
+    -fx-border-radius: 10;
+    -fx-cursor: hand;
+}
+.port-chip:hover {
+    -fx-background-color: -danger;
+    -fx-text-fill: white;
+    -fx-border-color: -danger;
+}
+
+/* Port tool action buttons */
+.port-btn {
+    -fx-font-size: 12px;
+    -fx-font-weight: bold;
+    -fx-padding: 7 18 7 18;
+    -fx-background-radius: 5;
+    -fx-cursor: hand;
+}
+.port-btn.primary {
+    -fx-background-color: -accent;
+    -fx-text-fill: white;
+}
+.port-btn.primary:hover { -fx-background-color: -accent-hover; }
+.port-btn.danger {
+    -fx-background-color: white;
+    -fx-text-fill: -danger;
+    -fx-border-color: -danger;
+    -fx-border-width: 1;
+    -fx-border-radius: 5;
+}
+.port-btn.danger:hover { -fx-background-color: #fef0f0; }
+
+/* Port result labels */
+.port-result-danger {
+    -fx-text-fill: #f44336;
+    -fx-font-size: 13px;
+    -fx-padding: 4 0 0 0;
+}
+.port-result-ok {
+    -fx-text-fill: #4caf50;
+    -fx-font-size: 13px;
+    -fx-padding: 4 0 0 0;
+}
+
+/* === File Association === */
+.assoc-table {
+    -fx-background-color: -bg-card;
+    -fx-table-cell-border-color: transparent;
+}
+
+.assoc-table .column-header-background {
+    -fx-background-color: #fafafa;
+    -fx-border-color: transparent transparent -border transparent;
+}
+
+.assoc-table .column-header {
+    -fx-padding: 12 8 12 8;
+}
+
+.assoc-table .column-header .label {
+    -fx-text-fill: -text-secondary;
+    -fx-font-weight: bold;
+    -fx-font-size: 11px;
+}
+
+.assoc-table .table-row-cell {
+    -fx-border-color: transparent transparent #f2f3f5 transparent;
+}
+
+.assoc-table .table-cell {
+    -fx-padding: 10 8 10 8;
+    -fx-text-fill: -text-primary;
+}
+
+/* Assoc action button in table */
+.assoc-action-btn {
+    -fx-font-size: 11px;
+    -fx-font-weight: bold;
+    -fx-padding: 4 12 4 12;
+    -fx-background-radius: 3;
+    -fx-cursor: hand;
+    -fx-background-color: -accent;
+    -fx-text-fill: white;
+}
+.assoc-action-btn:hover { -fx-background-color: -accent-hover; }
+
+/* Assoc hint text */
+.assoc-hint {
+    -fx-text-fill: -text-secondary;
+    -fx-font-size: 11px;
+    -fx-padding: 4 0 0 0;
+}

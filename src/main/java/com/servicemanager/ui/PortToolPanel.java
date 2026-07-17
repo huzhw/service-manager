@@ -1,103 +1,104 @@
 package com.servicemanager.ui;
 
-import javax.swing.*;
-import javax.swing.border.CompoundBorder;
-import javax.swing.border.EmptyBorder;
-import javax.swing.border.LineBorder;
-import java.awt.*;
+import javafx.application.Platform;
+import javafx.geometry.Insets;
+import javafx.geometry.Pos;
+import javafx.scene.control.*;
+import javafx.scene.layout.*;
+import javafx.scene.text.Font;
+
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.util.function.Consumer;
 
 /**
- * 端口工具面板 — 查找端口占用进程并强制终止
+ * 端口工具面板 — JavaFX 实现
+ * 查找端口占用进程并强制终止
  */
-public class PortToolPanel extends JPanel {
+public class PortToolPanel extends VBox {
 
     private final Consumer<String> logger;
 
-    private final JTextField portInput;
-    private final JButton findBtn;
-    private final JButton killBtn;
-    private final JLabel resultLabel;
+    private final TextField portInput;
+    private final Button findBtn;
+    private final Button killBtn;
+    private final Label resultLabel;
 
     private String currentPid;
     private String currentProcName;
 
-    /** 常用端口列表（来自 kill-档案端口.bat） */
+    /** 常用端口列表 */
     private static final int[] COMMON_PORTS = {
             3000, 3001, 8051, 8021, 8087, 8095, 8091, 8080, 8000, 8686, 10535
     };
 
-    private static final Color CARD_BORDER = new Color(0xE0, 0xE0, 0xE0);
-
     public PortToolPanel(Consumer<String> logger) {
         this.logger = logger;
 
-        setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
-        setBorder(new EmptyBorder(16, 16, 16, 16));
+        setSpacing(16);
+        setPadding(new Insets(16));
+        setStyle("-fx-background-color: #f0f2f5;");
 
         // ====== 自定义端口查找 ======
-        JPanel customPanel = createCard("🔍 查找端口");
+        VBox customPanel = createCard("🔍 查找端口");
 
-        JPanel inputRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 4));
-        inputRow.setOpaque(false);
-        inputRow.add(new JLabel("端口号："));
-        portInput = new JTextField(8);
-        inputRow.add(portInput);
-        findBtn = new JButton("查找");
-        findBtn.setFocusPainted(false);
-        killBtn = new JButton("终止进程");
-        killBtn.setFocusPainted(false);
-        killBtn.setEnabled(false);
-        inputRow.add(findBtn);
-        inputRow.add(killBtn);
+        HBox inputRow = new HBox(8);
+        inputRow.setAlignment(Pos.CENTER_LEFT);
+        inputRow.getChildren().add(new Label("端口号："));
 
-        resultLabel = new JLabel(" ");
-        resultLabel.setFont(resultLabel.getFont().deriveFont(12f));
+        portInput = new TextField();
+        portInput.setPrefWidth(100);
+        inputRow.getChildren().add(portInput);
 
-        customPanel.add(inputRow, BorderLayout.NORTH);
-        customPanel.add(resultLabel, BorderLayout.CENTER);
-        add(customPanel);
-        add(Box.createVerticalStrut(16));
+        findBtn = new Button("查找");
+        findBtn.getStyleClass().addAll("port-btn", "primary");
+        killBtn = new Button("终止进程");
+        killBtn.getStyleClass().addAll("port-btn", "danger");
+        killBtn.setDisable(true);
+        inputRow.getChildren().addAll(findBtn, killBtn);
+
+        resultLabel = new Label(" ");
+        resultLabel.setStyle("-fx-font-size: 13px;");
+
+        customPanel.getChildren().addAll(inputRow, resultLabel);
+        getChildren().add(customPanel);
 
         // ====== 常用端口快捷区 ======
-        JPanel quickPanel = createCard("⚡ 常用端口快捷查杀");
-        JPanel chipsPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 6));
-        chipsPanel.setOpaque(false);
+        VBox quickPanel = createCard("⚡ 常用端口快捷查杀");
+        FlowPane chipsPanel = new FlowPane(6, 6);
+        chipsPanel.setPrefWrapLength(560);
 
         for (int port : COMMON_PORTS) {
-            JButton chip = new JButton(String.valueOf(port));
-            chip.setFocusPainted(false);
-            chip.setFont(chip.getFont().deriveFont(11f));
-            chip.setMargin(new Insets(3, 10, 3, 10));
-            chip.setToolTipText("查找并终止端口 " + port);
-            chip.addActionListener(e -> quickKill(port, chip));
-            chipsPanel.add(chip);
+            Button chip = new Button(String.valueOf(port));
+            chip.getStyleClass().add("port-chip");
+            chip.setTooltip(new Tooltip("查找并终止端口 " + port));
+            chip.setOnAction(e -> quickKill(port, chip));
+            chipsPanel.getChildren().add(chip);
         }
-        quickPanel.add(chipsPanel, BorderLayout.CENTER);
-        add(quickPanel);
-        add(Box.createVerticalGlue());
+        quickPanel.getChildren().add(chipsPanel);
+        getChildren().add(quickPanel);
 
-        // ---- 事件绑定 ----
-        findBtn.addActionListener(e -> findPort());
-        killBtn.addActionListener(e -> killPort());
-        portInput.addActionListener(e -> findPort());
+        // Spacer
+        Region spacer = new Region();
+        VBox.setVgrow(spacer, javafx.scene.layout.Priority.ALWAYS);
+        getChildren().add(spacer);
+
+        // ---- 事件 ----
+        findBtn.setOnAction(e -> findPort());
+        killBtn.setOnAction(e -> killPort());
+        portInput.setOnAction(e -> findPort());
     }
 
     // ==========================================
     //  卡片骨架
     // ==========================================
-    private JPanel createCard(String title) {
-        JPanel card = new JPanel(new BorderLayout(8, 8));
-        card.setBorder(new CompoundBorder(
-                new LineBorder(CARD_BORDER, 1, true),
-                new EmptyBorder(12, 14, 12, 14)));
-        card.setOpaque(true);
+    private VBox createCard(String title) {
+        VBox card = new VBox(10);
+        card.getStyleClass().add("port-card");
 
-        JLabel titleLabel = new JLabel(title);
-        titleLabel.setFont(titleLabel.getFont().deriveFont(Font.BOLD, 14f));
-        card.add(titleLabel, BorderLayout.NORTH);
+        Label titleLabel = new Label(title);
+        titleLabel.getStyleClass().add("card-title");
+        card.getChildren().add(titleLabel);
         return card;
     }
 
@@ -113,13 +114,15 @@ public class PortToolPanel extends JPanel {
             port = Integer.parseInt(portStr);
         } catch (NumberFormatException e) {
             resultLabel.setText("请输入有效端口号");
+            resultLabel.getStyleClass().setAll("port-result-danger");
             return;
         }
 
         currentPid = null;
         currentProcName = null;
-        killBtn.setEnabled(false);
+        killBtn.setDisable(true);
         resultLabel.setText("检测中...");
+        resultLabel.getStyleClass().removeAll("port-result-danger", "port-result-ok");
 
         new Thread(() -> {
             String pid = findPidByPort(port);
@@ -128,17 +131,17 @@ public class PortToolPanel extends JPanel {
                 currentProcName = findProcName(pid);
                 String text = "⚠ 端口 " + port + " 被占用 — PID: " + pid
                         + (currentProcName != null ? " (" + currentProcName + ")" : "");
-                SwingUtilities.invokeLater(() -> {
+                Platform.runLater(() -> {
                     resultLabel.setText(text);
-                    resultLabel.setForeground(new Color(0xF4, 0x43, 0x36));
-                    killBtn.setEnabled(true);
+                    resultLabel.getStyleClass().setAll("port-result-danger");
+                    killBtn.setDisable(false);
                 });
                 logger.accept("发现端口 " + port + " 被 PID " + pid + " 占用");
             } else {
-                SwingUtilities.invokeLater(() -> {
+                Platform.runLater(() -> {
                     resultLabel.setText("✓ 端口 " + port + " 未被占用");
-                    resultLabel.setForeground(new Color(0x4C, 0xAF, 0x50));
-                    killBtn.setEnabled(false);
+                    resultLabel.getStyleClass().setAll("port-result-ok");
+                    killBtn.setDisable(true);
                 });
             }
         }).start();
@@ -155,13 +158,12 @@ public class PortToolPanel extends JPanel {
             } else {
                 logger.accept("  ✗ 终止失败: " + (output != null ? output.trim() : "无输出"));
             }
-            // 刷新状态
-            SwingUtilities.invokeLater(() -> findPort());
+            Platform.runLater(() -> findPort());
         }).start();
     }
 
-    private void quickKill(int port, JButton chip) {
-        chip.setEnabled(false);
+    private void quickKill(int port, Button chip) {
+        chip.setDisable(true);
         new Thread(() -> {
             String pid = findPidByPort(port);
             if (pid != null) {
@@ -177,7 +179,7 @@ public class PortToolPanel extends JPanel {
             } else {
                 logger.accept("  ✓ 端口 " + port + " 未被占用");
             }
-            SwingUtilities.invokeLater(() -> chip.setEnabled(true));
+            Platform.runLater(() -> chip.setDisable(false));
         }).start();
     }
 
@@ -189,10 +191,9 @@ public class PortToolPanel extends JPanel {
         if (output != null) {
             for (String line : output.split("\n")) {
                 line = line.trim();
-                // netstat 输出格式: TCP  0.0.0.0:8080  0.0.0.0:0  LISTENING  12345
                 String[] parts = line.split("\\s+");
                 if (parts.length >= 5) {
-                    return parts[parts.length - 1]; // PID 是最后一列
+                    return parts[parts.length - 1];
                 }
             }
         }
@@ -205,7 +206,6 @@ public class PortToolPanel extends JPanel {
             for (String line : output.split("\n")) {
                 line = line.trim();
                 if (line.contains(pid)) {
-                    // tasklist 输出格式: java.exe  12345  Console  1  1,234,567 K
                     String[] parts = line.split("\\s+");
                     if (parts.length >= 1) {
                         return parts[0];

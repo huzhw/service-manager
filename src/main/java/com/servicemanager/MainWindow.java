@@ -10,14 +10,12 @@ import com.servicemanager.util.LogManager;
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
 import javafx.application.Platform;
-import javafx.embed.swing.SwingNode;
 import javafx.geometry.Pos;
 import javafx.scene.control.*;
 import javafx.scene.layout.*;
 import javafx.stage.Stage;
 import javafx.util.Duration;
 
-import javax.swing.*;
 import java.util.List;
 
 /**
@@ -193,30 +191,18 @@ public class MainWindow extends AnchorPane {
     }
 
     private void showVersionTab() {
-        SwingNode node = new SwingNode();
-        SwingUtilities.invokeLater(() -> {
-            VersionPanel vp = new VersionPanel(LogManager::log);
-            node.setContent(vp);
-        });
-        contentArea.getChildren().setAll(new ScrollPane(node));
+        VersionPanel vp = new VersionPanel(LogManager::log);
+        contentArea.getChildren().setAll(vp);
     }
 
     private void showPortTab() {
-        SwingNode node = new SwingNode();
-        SwingUtilities.invokeLater(() -> {
-            PortToolPanel pp = new PortToolPanel(LogManager::log);
-            node.setContent(pp);
-        });
-        contentArea.getChildren().setAll(new ScrollPane(node));
+        PortToolPanel pp = new PortToolPanel(LogManager::log);
+        contentArea.getChildren().setAll(pp);
     }
 
     private void showFileAssocTab() {
-        SwingNode node = new SwingNode();
-        SwingUtilities.invokeLater(() -> {
-            FileAssocPanel fp = new FileAssocPanel(LogManager::log);
-            node.setContent(fp);
-        });
-        contentArea.getChildren().setAll(new ScrollPane(node));
+        FileAssocPanel fp = new FileAssocPanel(LogManager::log);
+        contentArea.getChildren().setAll(fp);
     }
 
     // ==========================================
