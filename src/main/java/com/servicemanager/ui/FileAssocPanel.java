@@ -47,6 +47,22 @@ public class FileAssocPanel extends VBox {
         EXTENSIONS.put(".csv",  "CSV 表格");
         EXTENSIONS.put(".vsd",  "Visio (97-2003)");
         EXTENSIONS.put(".vsdx", "Visio 绘图");
+        // 视频
+        EXTENSIONS.put(".mp4",  "MP4 视频");
+        EXTENSIONS.put(".avi",  "AVI 视频");
+        EXTENSIONS.put(".mkv",  "MKV 视频");
+        EXTENSIONS.put(".mov",  "MOV 视频");
+        EXTENSIONS.put(".wmv",  "WMV 视频");
+        EXTENSIONS.put(".flv",  "FLV 视频");
+        EXTENSIONS.put(".rmvb", "RMVB 视频");
+        EXTENSIONS.put(".webm", "WebM 视频");
+        EXTENSIONS.put(".ts",   "TS 视频流");
+        EXTENSIONS.put(".m3u8", "m3u8 播放列表");
+        EXTENSIONS.put(".mpg",  "MPEG 视频");
+        EXTENSIONS.put(".mpeg", "MPEG 视频");
+        EXTENSIONS.put(".3gp",  "3GP 视频");
+        EXTENSIONS.put(".rm",   "RM 视频");
+        EXTENSIONS.put(".m4v",  "M4V 视频");
         // 其他
         EXTENSIONS.put(".pdf",  "PDF 文档");
         EXTENSIONS.put(".zip",  "压缩包");
