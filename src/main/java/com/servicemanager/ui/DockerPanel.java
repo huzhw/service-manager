@@ -38,7 +38,6 @@ public class DockerPanel extends VBox {
     // 人大金仓
     private final Circle kingbaseDot;
     private final Label kingbaseLabel;
-    private final Button kingbaseInstallBtn;
     private final Button kingbaseStartBtn;
     private final Button kingbaseStopBtn;
     private final Button kingbaseLogBtn;
@@ -53,7 +52,7 @@ public class DockerPanel extends VBox {
 
     private static final String KINGBASE_NAME = "kingbase";
     private static final String KINGBASE_IMAGE = "yhl452493373/kingbase_v009r001c010b0004_single_x86:v1";
-    private static final String DOCKER_DESKTOP_PATH = "F:\\Program Files\\Docker\\Docker\\Docker Desktop.exe";
+    private static final String DOCKER_DESKTOP_PATH = "F:\\Docker\\Docker Desktop.exe";
 
     public DockerPanel(Consumer<String> logger) {
         this.logger = logger;
@@ -90,8 +89,6 @@ public class DockerPanel extends VBox {
         kingbaseLabel = new Label("检测中...");
         kingbaseLabel.setStyle("-fx-font-size: 13px;");
 
-        kingbaseInstallBtn = new Button("安装金仓");
-        kingbaseInstallBtn.getStyleClass().addAll("port-btn", "primary");
         kingbaseStartBtn = new Button("启动");
         kingbaseStartBtn.getStyleClass().addAll("port-btn", "primary");
         kingbaseStopBtn = new Button("停止");
@@ -99,14 +96,13 @@ public class DockerPanel extends VBox {
         kingbaseLogBtn = new Button("日志");
         kingbaseLogBtn.getStyleClass().addAll("port-btn", "secondary");
 
-        kingbaseInstallBtn.setOnAction(e -> installKingbase());
         kingbaseStartBtn.setOnAction(e -> kingbaseAction("start"));
         kingbaseStopBtn.setOnAction(e -> kingbaseAction("stop"));
         kingbaseLogBtn.setOnAction(e -> kingbaseAction("logs"));
 
         HBox kingbaseRow = new HBox(10, kingbaseDot, kingbaseLabel);
         kingbaseRow.setAlignment(Pos.CENTER_LEFT);
-        HBox kingbaseBtns = new HBox(8, kingbaseInstallBtn, kingbaseStartBtn, kingbaseStopBtn, kingbaseLogBtn);
+        HBox kingbaseBtns = new HBox(8, kingbaseStartBtn, kingbaseStopBtn, kingbaseLogBtn);
         kingbaseBtns.setAlignment(Pos.CENTER_LEFT);
 
         kingbaseCard.getChildren().addAll(kingbaseRow, kingbaseBtns);
@@ -231,7 +227,6 @@ public class DockerPanel extends VBox {
         boolean running = installed && json.contains("\"running\"");
 
         Platform.runLater(() -> {
-            kingbaseInstallBtn.setDisable(installed);
             if (running) {
                 kingbaseDot.setFill(Color.web("#4caf50"));
                 kingbaseLabel.setText("金仓运行中 — localhost:54321 · Oracle 兼容模式 · system/12345678ab");
@@ -254,41 +249,6 @@ public class DockerPanel extends VBox {
         });
     }
 
-    private void installKingbase() {
-        kingbaseInstallBtn.setDisable(true);
-        kingbaseLabel.setText("正在拉取镜像并安装金仓...（可能需要几分钟）");
-        new Thread(() -> {
-            logger.accept("→ 开始安装人大金仓 (Oracle 兼容模式) ...");
-            logger.accept("→ 拉取镜像 " + KINGBASE_IMAGE + " ...");
-
-            // 先拉镜像
-            String pullOut = exec("docker pull " + KINGBASE_IMAGE);
-            if (pullOut != null) {
-                for (String line : pullOut.split("\n")) {
-                    logger.accept("  " + line.trim());
-                }
-            }
-
-            // 启动容器
-            logger.accept("→ 创建并启动金仓容器 ...");
-            String runOut = exec("docker run -d --name " + KINGBASE_NAME
-                    + " -p 54321:54321"
-                    + " -e NEED_START=yes"
-                    + " -e DB_MODE=oracle"
-                    + " -e DB_PASSWORD=12345678ab"
-                    + " --restart unless-stopped"
-                    + " " + KINGBASE_IMAGE);
-
-            if (runOut != null && !runOut.trim().isEmpty()) {
-                logger.accept("✓ 金仓容器已创建: " + runOut.trim());
-                logger.accept("✓ 连接信息: localhost:54321, system/12345678ab, 数据库 test");
-                logger.accept("✓ Oracle 兼容模式已启用");
-            } else {
-                logger.accept("✗ 金仓容器启动失败，请检查 Docker 是否正常");
-            }
-            Platform.runLater(() -> refreshAll());
-        }).start();
-    }
 
     private void kingbaseAction(String action) {
         new Thread(() -> {
