@@ -5,4 +5,5 @@ if %errorlevel% neq 0 (
     exit /b
 )
 cd /d "%~dp0"
-start javaw -jar "target\service-manager-1.0.0.jar"
+set JAVA_HOME=D:\tools\elasticsearch-8.11.3\elasticsearch-8.11.3\jdk
+start "" "%JAVA_HOME%\bin\javaw" --module-path "target\lib" --add-modules javafx.controls,javafx.media,javafx.web,javafx.swing -jar "target\service-manager-2.0.0.jar"
