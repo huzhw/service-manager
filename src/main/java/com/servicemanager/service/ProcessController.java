@@ -65,8 +65,8 @@ public class ProcessController implements ServiceController {
                 // bat 脚本
                 pb = new ProcessBuilder("cmd", "/c", cmd.substring("cmd /c ".length()));
             } else {
-                // 直接可执行文件
-                pb = new ProcessBuilder(cmd.split(" "));
+                // 直接可执行文件（用 cmd /c 包裹，避免路径含空格时 split 出错）
+                pb = new ProcessBuilder("cmd", "/c", cmd);
             }
 
             // 设置工作目录
