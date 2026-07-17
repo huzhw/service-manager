@@ -38,6 +38,9 @@ public class ServiceInfo {
     /** 进程 PID（仅进程类型） */
     private long pid;
 
+    /** 启动时间戳（毫秒），0 = 未启动 */
+    private long startTime;
+
     public ServiceInfo() {
     }
 
@@ -137,5 +140,13 @@ public class ServiceInfo {
 
     public void setPid(long pid) {
         this.pid = pid;
+    }
+
+    public long getStartTime() {
+        return startTime;
+    }
+
+    public void setStartTime(long startTime) {
+        this.startTime = startTime;
     }
 }

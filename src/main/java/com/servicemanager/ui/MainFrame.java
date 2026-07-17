@@ -8,6 +8,7 @@ import com.servicemanager.model.ServiceType;
 import com.servicemanager.service.ProcessController;
 import com.servicemanager.service.ServiceController;
 import com.servicemanager.service.WindowsServiceController;
+import com.servicemanager.util.PortChecker;
 
 import javax.swing.*;
 import javax.swing.table.AbstractTableModel;
@@ -264,6 +265,12 @@ public class MainFrame extends JFrame {
             for (ServiceInfo svc : services) {
                 ServiceController ctrl = getController(svc);
                 String status = ctrl.getStatus(svc);
+                // 端口双重验证：进程存活但端口不通则标记警告
+                if ("RUNNING".equals(status) && svc.getPort() > 0) {
+                    if (!PortChecker.isPortOpen(svc.getPort())) {
+                        status = "PORT_UNREACHABLE";
+                    }
+                }
                 svc.setStatus(status);
                 if ("RUNNING".equals(status)) {
                     runningCount++;
@@ -297,6 +304,7 @@ public class MainFrame extends JFrame {
                 boolean result = ctrl.start(svc);
                 if (result) {
                     svc.setStatus("RUNNING");
+                    svc.setStartTime(System.currentTimeMillis());
                     appendLog("  ✓ " + svc.getName() + " 启动成功");
                     ok++;
                 } else {
@@ -335,6 +343,7 @@ public class MainFrame extends JFrame {
                 if (result) {
                     svc.setStatus("STOPPED");
                     svc.setPid(0);
+                    svc.setStartTime(0);
                     appendLog("  ✓ " + svc.getName() + " 已停止");
                     ok++;
                 } else {
@@ -568,12 +577,18 @@ public class MainFrame extends JFrame {
                     setStatusText("正在停止: " + svc.getName());
                     appendLog("← 停止 " + svc.getName() + " ...");
                     boolean ok = ctrl.stop(svc);
+                    if (ok) {
+                        svc.setStartTime(0);
+                    }
                     appendLog(ok ? "  ✓ " + svc.getName() + " 已停止"
                                  : "  ✗ " + svc.getName() + " 停止失败");
                 } else {
                     setStatusText("正在启动: " + svc.getName());
                     appendLog("→ 启动 " + svc.getName() + " ...");
                     boolean ok = ctrl.start(svc);
+                    if (ok) {
+                        svc.setStartTime(System.currentTimeMillis());
+                    }
                     appendLog(ok ? "  ✓ " + svc.getName() + " 启动成功"
                                  : "  ✗ " + svc.getName() + " 启动失败");
                 }
