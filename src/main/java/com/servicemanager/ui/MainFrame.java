@@ -112,10 +112,11 @@ public class MainFrame extends JFrame {
         table = new JTable(tableModel);
         table.setRowHeight(38);
         table.getColumnModel().getColumn(0).setMaxWidth(40);
-        table.getColumnModel().getColumn(1).setPreferredWidth(140);
+        table.getColumnModel().getColumn(1).setPreferredWidth(110);
+        table.getColumnModel().getColumn(1).setMaxWidth(150);
         table.getColumnModel().getColumn(2).setMaxWidth(90);
         table.getColumnModel().getColumn(3).setMaxWidth(60);
-        table.getColumnModel().getColumn(4).setMaxWidth(110);
+        table.getColumnModel().getColumn(4).setMaxWidth(140);
         table.getColumnModel().getColumn(5).setMaxWidth(80);
 
         // 服务名列渲染（分类色标）
@@ -342,6 +343,8 @@ public class MainFrame extends JFrame {
             ServiceController ctrl = getController(svc);
             if (stopping) {
                 setStatusText("正在停止: " + svc.getName());
+                svc.setStatus("STOPPING");
+                tableModel.fireTableDataChanged();
                 appendLog("← 停止 " + svc.getName() + " ...");
                 boolean ok = ctrl.stop(svc);
                 if (ok) svc.setStartTime(0);
@@ -349,6 +352,8 @@ public class MainFrame extends JFrame {
                              : "  ✗ " + svc.getName() + " 停止失败");
             } else {
                 setStatusText("正在启动: " + svc.getName());
+                svc.setStatus("STARTING");
+                tableModel.fireTableDataChanged();
                 appendLog("→ 启动 " + svc.getName() + " ...");
                 boolean ok = ctrl.start(svc);
                 if (ok) svc.setStartTime(System.currentTimeMillis());
@@ -434,6 +439,8 @@ public class MainFrame extends JFrame {
                     continue;
                 }
                 setStatusText("正在启动: " + svc.getName());
+                svc.setStatus("STARTING");
+                tableModel.fireTableDataChanged();
                 appendLog("→ 启动 " + svc.getName() + " ...");
                 ServiceController ctrl = getController(svc);
                 boolean result = ctrl.start(svc);
@@ -472,6 +479,8 @@ public class MainFrame extends JFrame {
                     continue;
                 }
                 setStatusText("正在停止: " + svc.getName());
+                svc.setStatus("STOPPING");
+                tableModel.fireTableDataChanged();
                 appendLog("← 停止 " + svc.getName() + " ...");
                 ServiceController ctrl = getController(svc);
                 boolean result = ctrl.stop(svc);
@@ -728,6 +737,8 @@ public class MainFrame extends JFrame {
                 ServiceController ctrl = getController(svc);
                 if ("RUNNING".equals(svc.getStatus())) {
                     setStatusText("正在停止: " + svc.getName());
+                    svc.setStatus("STOPPING");
+                    tableModel.fireTableDataChanged();
                     appendLog("← 停止 " + svc.getName() + " ...");
                     boolean ok = ctrl.stop(svc);
                     if (ok) {
@@ -737,6 +748,8 @@ public class MainFrame extends JFrame {
                                  : "  ✗ " + svc.getName() + " 停止失败");
                 } else {
                     setStatusText("正在启动: " + svc.getName());
+                    svc.setStatus("STARTING");
+                    tableModel.fireTableDataChanged();
                     appendLog("→ 启动 " + svc.getName() + " ...");
                     boolean ok = ctrl.start(svc);
                     if (ok) {
