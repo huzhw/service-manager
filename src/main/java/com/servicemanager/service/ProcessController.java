@@ -88,7 +88,23 @@ public class ProcessController implements ServiceController {
 
             // 等待一小段时间确认启动
             Thread.sleep(2000);
-            return isPidAlive(pid);
+            if (isPidAlive(pid)) {
+                return true;
+            }
+            // 父进程（powershell/cmd脚本）可能已退出，但子进程还在启动中
+            // 有端口则用端口兜底验证
+            if (info.getPort() > 0) {
+                Thread.sleep(3000); // 给子进程更多启动时间
+                if (PortChecker.isPortOpen(info.getPort())) {
+                    long portPid = findPidByPort(info.getPort());
+                    if (portPid > 0) {
+                        info.setPid(portPid);
+                        savePid(info.getName(), portPid);
+                    }
+                    return true;
+                }
+            }
+            return false;
 
         } catch (Exception e) {
             return false;

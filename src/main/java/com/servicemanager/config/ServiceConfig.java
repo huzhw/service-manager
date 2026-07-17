@@ -70,7 +70,7 @@ public class ServiceConfig {
         list.add(nginx);
 
         ServiceInfo nacos = new ServiceInfo("Nacos", ServiceType.PROCESS,
-                "F:\\Program Files\\nacos-server-1.4.0\\nacos\\bin\\startup.cmd",
+                "cmd /c \"start /min /wait \"\" \"F:\\Program Files\\nacos-server-1.4.0\\nacos\\restart_nacos.bat\"\"\"",
                 8848, "注册中心");
         nacos.setWorkingDir("F:\\Program Files\\nacos-server-1.4.0\\nacos");
         nacos.setProcessName("java.exe");
