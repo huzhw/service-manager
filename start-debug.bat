@@ -1,23 +1,27 @@
 @echo off
 cd /d "%~dp0"
 
+:: Auto-elevate to admin
+net session >nul 2>&1
+if %errorlevel% neq 0 (
+    echo Requesting administrator privileges...
+    powershell -Command "Start-Process '%~f0' -Verb RunAs"
+    exit /b
+)
+
 echo ========================================
-echo   Service Manager — Debug Mode
+echo   Service Manager — Debug Mode (Admin)
 echo ========================================
 echo Current dir: %CD%
 echo.
 
-:: Check JAR
-if not exist "target\service-manager-1.0.0.jar" (
-    echo [1/2] Building JAR...
-    call mvn package -DskipTests
-    if errorlevel 1 (
-        echo Build failed!
-        pause
-        exit /b 1
-    )
-) else (
-    echo [1/2] JAR exists, skip build
+:: Force rebuild to get latest fixes
+echo [1/2] Building JAR...
+call mvn package -DskipTests
+if errorlevel 1 (
+    echo Build failed!
+    pause
+    exit /b 1
 )
 
 :: Run in foreground with console output

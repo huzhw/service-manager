@@ -127,6 +127,20 @@ public class MainFrame extends JFrame {
         table.getColumnModel().getColumn(5).setCellRenderer(new ButtonRenderer());
         table.getColumnModel().getColumn(5).setCellEditor(new ButtonEditor());
 
+        // 操作列单击直接触发（不用双击进入编辑再点按钮）
+        table.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                if (e.getButton() != MouseEvent.BUTTON1) return;
+                int col = table.columnAtPoint(e.getPoint());
+                int row = table.rowAtPoint(e.getPoint());
+                if (col == 5 && row >= 0) {
+                    ServiceInfo svc = tableModel.getServiceAt(row);
+                    triggerSingleAction(svc, "RUNNING".equals(svc.getStatus()));
+                }
+            }
+        });
+
         // 右键菜单
         JPopupMenu popupMenu = buildPopupMenu();
         table.addMouseListener(new MouseAdapter() {
