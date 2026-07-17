@@ -31,11 +31,13 @@ public class ServiceConfig {
         ServiceInfo oracleDb = new ServiceInfo("Oracle 主库", ServiceType.WINDOWS_SERVICE, "OracleServiceORCL", 1521, "数据库");
         oracleDb.setStartOrder(2);
         oracleDb.setStopOrder(1);
+        oracleDb.setGroupName("Oracle");
         list.add(oracleDb);
 
         ServiceInfo oracleListener = new ServiceInfo("Oracle 监听", ServiceType.WINDOWS_SERVICE, "OracleOraDb11g_home1TNSListener", 1521, "数据库");
         oracleListener.setStartOrder(1);
         oracleListener.setStopOrder(2);
+        oracleListener.setGroupName("Oracle");
         list.add(oracleListener);
 
         ServiceInfo dm = new ServiceInfo("达梦 DM8", ServiceType.WINDOWS_SERVICE, "DmServiceDMSERVER", 5236, "数据库");

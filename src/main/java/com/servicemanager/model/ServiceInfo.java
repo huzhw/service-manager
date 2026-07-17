@@ -26,6 +26,9 @@ public class ServiceInfo {
     /** 分类：数据库 / 缓存 / 搜索引擎 / 对象存储 / Web服务器 / 注册中心 */
     private String category;
 
+    /** 分组名，同组服务联动启停（如 Oracle 主库+监听） */
+    private String groupName;
+
     /** 启动顺序，越小越先启动 */
     private int startOrder;
 
@@ -108,6 +111,14 @@ public class ServiceInfo {
 
     public void setCategory(String category) {
         this.category = category;
+    }
+
+    public String getGroupName() {
+        return groupName;
+    }
+
+    public void setGroupName(String groupName) {
+        this.groupName = groupName;
     }
 
     public int getStartOrder() {

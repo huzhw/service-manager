@@ -109,15 +109,32 @@ public class MainFrame extends JFrame {
 
         // ---- 中部表格 ----
         tableModel = new ServiceTableModel(services);
-        table = new JTable(tableModel);
+        table = new JTable(tableModel) {
+            @Override
+            public Component prepareRenderer(TableCellRenderer renderer, int row, int col) {
+                Component c = super.prepareRenderer(renderer, row, col);
+                if (!isCellSelected(row, col)) {
+                    c.setBackground(row % 2 == 0 ? Color.WHITE : new Color(0xF5, 0xF7, 0xFA));
+                } else {
+                    c.setBackground(new Color(0xE3, 0xF2, 0xFD));
+                }
+                if (c instanceof JComponent) {
+                    ((JComponent) c).setBorder(BorderFactory.createEmptyBorder(2, 8, 2, 8));
+                }
+                return c;
+            }
+        };
         table.setRowHeight(38);
+        table.setAutoResizeMode(JTable.AUTO_RESIZE_ALL_COLUMNS);
         table.getColumnModel().getColumn(0).setMaxWidth(40);
-        table.getColumnModel().getColumn(1).setPreferredWidth(110);
-        table.getColumnModel().getColumn(1).setMaxWidth(150);
-        table.getColumnModel().getColumn(2).setMaxWidth(110);
+        table.getColumnModel().getColumn(0).setMinWidth(40);
+        table.getColumnModel().getColumn(1).setPreferredWidth(120);
+        table.getColumnModel().getColumn(2).setMaxWidth(90);
         table.getColumnModel().getColumn(3).setMaxWidth(60);
-        table.getColumnModel().getColumn(4).setMaxWidth(140);
+        table.getColumnModel().getColumn(3).setMinWidth(60);
+        table.getColumnModel().getColumn(4).setMaxWidth(130);
         table.getColumnModel().getColumn(5).setMaxWidth(80);
+        table.getColumnModel().getColumn(5).setMinWidth(80);
 
         // 服务名列渲染（分类色标）
         table.getColumnModel().getColumn(1).setCellRenderer(new NameRenderer());
@@ -162,11 +179,6 @@ public class MainFrame extends JFrame {
                 }
             }
         });
-
-        // 斑马纹 + 隐藏网格
-        table.setDefaultRenderer(Object.class, new ZebraRenderer());
-        table.setShowGrid(false);
-        table.setIntercellSpacing(new Dimension(0, 0));
 
         JScrollPane scrollPane = new JScrollPane(table);
         scrollPane.setBorder(BorderFactory.createEmptyBorder());
@@ -370,27 +382,38 @@ public class MainFrame extends JFrame {
 
     private void triggerSingleAction(ServiceInfo svc, boolean stopping) {
         new Thread(() -> {
-            ServiceController ctrl = getController(svc);
+            List<ServiceInfo> group = getGroupMembers(svc);
+            // 同组按顺序操作
             if (stopping) {
-                setStatusText("正在停止: " + svc.getName());
-                svc.setStatus("STOPPING");
-                tableModel.fireTableDataChanged();
-                appendLog("← 停止 " + svc.getName() + " ...");
-                boolean ok = ctrl.stop(svc);
-                if (ok) svc.setStartTime(0);
-                appendLog(ok ? "  ✓ " + svc.getName() + " 已停止"
-                             : "  ✗ " + svc.getName() + " 停止失败");
+                group.sort(Comparator.comparingInt(ServiceInfo::getStopOrder));
             } else {
-                setStatusText("正在启动: " + svc.getName());
-                svc.setStatus("STARTING");
-                tableModel.fireTableDataChanged();
-                appendLog("→ 启动 " + svc.getName() + " ...");
-                boolean ok = ctrl.start(svc);
-                if (ok) svc.setStartTime(System.currentTimeMillis());
-                appendLog(ok ? "  ✓ " + svc.getName() + " 启动成功"
-                             : "  ✗ " + svc.getName() + " 启动失败");
+                group.sort(Comparator.comparingInt(ServiceInfo::getStartOrder));
             }
-            try { Thread.sleep(800); } catch (InterruptedException ex) { Thread.currentThread().interrupt(); }
+            for (ServiceInfo member : group) {
+                ServiceController ctrl = getController(member);
+                if (stopping) {
+                    if ("STOPPED".equals(member.getStatus())) continue;
+                    setStatusText("正在停止: " + member.getName());
+                    member.setStatus("STOPPING");
+                    tableModel.fireTableDataChanged();
+                    appendLog("← 停止 " + member.getName() + " ...");
+                    boolean ok = ctrl.stop(member);
+                    if (ok) member.setStartTime(0);
+                    appendLog(ok ? "  ✓ " + member.getName() + " 已停止"
+                                 : "  ✗ " + member.getName() + " 停止失败");
+                } else {
+                    if ("RUNNING".equals(member.getStatus())) continue;
+                    setStatusText("正在启动: " + member.getName());
+                    member.setStatus("STARTING");
+                    tableModel.fireTableDataChanged();
+                    appendLog("→ 启动 " + member.getName() + " ...");
+                    boolean ok = ctrl.start(member);
+                    if (ok) member.setStartTime(System.currentTimeMillis());
+                    appendLog(ok ? "  ✓ " + member.getName() + " 启动成功"
+                                 : "  ✗ " + member.getName() + " 启动失败");
+                }
+                try { Thread.sleep(800); } catch (InterruptedException ex) { Thread.currentThread().interrupt(); return; }
+            }
             refreshAllStatus();
         }).start();
     }
@@ -551,6 +574,23 @@ public class MainFrame extends JFrame {
         return procController;
     }
 
+    /** 获取同组的所有服务（包括自身） */
+    private List<ServiceInfo> getGroupMembers(ServiceInfo svc) {
+        String group = svc.getGroupName();
+        if (group == null || group.isEmpty()) {
+            List<ServiceInfo> self = new java.util.ArrayList<>();
+            self.add(svc);
+            return self;
+        }
+        List<ServiceInfo> members = new java.util.ArrayList<>();
+        for (ServiceInfo s : services) {
+            if (group.equals(s.getGroupName())) {
+                members.add(s);
+            }
+        }
+        return members;
+    }
+
     public void stopTimer() {
         if (refreshTimer != null) {
             refreshTimer.stop();
@@ -597,32 +637,6 @@ public class MainFrame extends JFrame {
     }
 
     // ==========================================
-    //  斑马纹渲染器
-    // ==========================================
-    static class ZebraRenderer extends DefaultTableCellRenderer {
-        private static final Color ZEBRA_ODD  = new Color(0xF5, 0xF7, 0xFA);
-        private static final Color ZEBRA_EVEN = Color.WHITE;
-        private static final Color SELECTED_BG = new Color(0xE3, 0xF2, 0xFD);
-
-        @Override
-        public Component getTableCellRendererComponent(JTable table, Object value,
-                                                       boolean isSelected, boolean hasFocus,
-                                                       int row, int col) {
-            Component c = super.getTableCellRendererComponent(
-                    table, value, isSelected, hasFocus, row, col);
-            if (!isSelected) {
-                c.setBackground(row % 2 == 0 ? ZEBRA_EVEN : ZEBRA_ODD);
-            } else {
-                c.setBackground(SELECTED_BG);
-                c.setForeground(Color.BLACK);
-            }
-            if (c instanceof JLabel) {
-                ((JLabel) c).setBorder(BorderFactory.createEmptyBorder(2, 8, 2, 8));
-            }
-            return c;
-        }
-    }
-
     // ==========================================
     //  服务名列渲染（分类色标 + 服务名）
     // ==========================================
@@ -763,38 +777,7 @@ public class MainFrame extends JFrame {
         @Override
         public boolean stopCellEditing() {
             ServiceInfo svc = tableModel.getServiceAt(currentRow);
-            new Thread(() -> {
-                ServiceController ctrl = getController(svc);
-                if ("RUNNING".equals(svc.getStatus())) {
-                    setStatusText("正在停止: " + svc.getName());
-                    svc.setStatus("STOPPING");
-                    tableModel.fireTableDataChanged();
-                    appendLog("← 停止 " + svc.getName() + " ...");
-                    boolean ok = ctrl.stop(svc);
-                    if (ok) {
-                        svc.setStartTime(0);
-                    }
-                    appendLog(ok ? "  ✓ " + svc.getName() + " 已停止"
-                                 : "  ✗ " + svc.getName() + " 停止失败");
-                } else {
-                    setStatusText("正在启动: " + svc.getName());
-                    svc.setStatus("STARTING");
-                    tableModel.fireTableDataChanged();
-                    appendLog("→ 启动 " + svc.getName() + " ...");
-                    boolean ok = ctrl.start(svc);
-                    if (ok) {
-                        svc.setStartTime(System.currentTimeMillis());
-                    }
-                    appendLog(ok ? "  ✓ " + svc.getName() + " 启动成功"
-                                 : "  ✗ " + svc.getName() + " 启动失败");
-                }
-                try {
-                    Thread.sleep(800);
-                } catch (InterruptedException ex) {
-                    Thread.currentThread().interrupt();
-                }
-                refreshAllStatus();
-            }).start();
+            triggerSingleAction(svc, "RUNNING".equals(svc.getStatus()));
             return super.stopCellEditing();
         }
     }
