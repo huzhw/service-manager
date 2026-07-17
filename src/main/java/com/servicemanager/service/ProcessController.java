@@ -4,7 +4,6 @@ import com.servicemanager.model.ServiceInfo;
 import com.servicemanager.util.PortChecker;
 
 import java.io.*;
-import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
@@ -60,9 +59,22 @@ public class ProcessController implements ServiceController {
 
             // 根据命令类型构建 ProcessBuilder
             if (cmd.startsWith("powershell ")) {
-                // PowerShell 脚本
-                pb = new ProcessBuilder("powershell", "-ExecutionPolicy", "Bypass",
-                        "-Command", cmd.substring("powershell ".length()));
+                // PowerShell 脚本 — 提取 -File 路径，避免 -Command 嵌套问题
+                String rest = cmd.substring("powershell ".length()).trim();
+                String ps1Path = rest;
+                if (rest.startsWith("-File ")) {
+                    ps1Path = rest.substring(6).trim();
+                } else if (rest.startsWith("-ExecutionPolicy ")) {
+                    int fileIdx = rest.indexOf("-File ");
+                    if (fileIdx >= 0) {
+                        ps1Path = rest.substring(fileIdx + 6).trim();
+                    }
+                }
+                // 去外层引号
+                if (ps1Path.startsWith("\"") && ps1Path.endsWith("\"")) {
+                    ps1Path = ps1Path.substring(1, ps1Path.length() - 1);
+                }
+                pb = new ProcessBuilder("powershell", "-ExecutionPolicy", "Bypass", "-File", ps1Path);
             } else if (cmd.startsWith("cmd /c ")) {
                 // bat 脚本
                 pb = new ProcessBuilder("cmd", "/c", cmd.substring("cmd /c ".length()));
@@ -96,7 +108,7 @@ public class ProcessController implements ServiceController {
             // 父进程（powershell/cmd脚本）可能已退出，但子进程还在启动中
             // 有端口则用端口兜底验证（Nacos 3.x 需 ~15s）
             if (info.getPort() > 0) {
-                Thread.sleep(13000);
+                Thread.sleep(23000);
                 if (PortChecker.isPortOpen(info.getPort())) {
                     long portPid = findPidByPort(info.getPort());
                     if (portPid > 0) {
@@ -124,25 +136,21 @@ public class ProcessController implements ServiceController {
         }
 
         try {
-            // 优先用 processName 全杀（比 /T 更可靠，能清理 nginx 这类多进程守护）
-            String processName = info.getProcessName();
-            boolean killed = false;
-            if (processName != null && !processName.isEmpty()) {
-                ProcessBuilder pb = new ProcessBuilder("taskkill", "/IM", processName, "/F");
-                pb.redirectErrorStream(true);
-                Process p = pb.start();
-                p.waitFor();
-                killed = (p.exitValue() == 0);
+            // 优先用 PID 杀指定进程
+            ProcessBuilder pb = new ProcessBuilder("taskkill", "/PID", String.valueOf(pid), "/F");
+            pb.redirectErrorStream(true);
+            Process p = pb.start();
+            p.waitFor();
+            if (p.exitValue() != 0) {
+                return false;
             }
-            // 兜底用 PID
-            if (!killed) {
-                ProcessBuilder pb = new ProcessBuilder("taskkill", "/PID", String.valueOf(pid), "/F");
-                pb.redirectErrorStream(true);
-                Process p = pb.start();
-                p.waitFor();
-                if (p.exitValue() != 0) {
-                    return false;
-                }
+            // nginx 多进程守护：补一刀进程名全杀
+            String processName = info.getProcessName();
+            if (processName != null && !processName.isEmpty()
+                    && !"java.exe".equalsIgnoreCase(processName)) {
+                ProcessBuilder pb2 = new ProcessBuilder("taskkill", "/IM", processName, "/F");
+                pb2.redirectErrorStream(true);
+                pb2.start().waitFor();
             }
 
             // 验证进程已停止（最多等 5 秒）
@@ -248,20 +256,10 @@ public class ProcessController implements ServiceController {
     }
 
     /**
-     * 反射获取 Windows 进程 PID（兼容 Java 8）
+     * 获取 Windows 进程 PID（JDK 21 直接用 Process.pid()）
      */
     private long getPid(Process process) {
-        try {
-            // Java 8: ProcessImpl 有私有字段 pid
-            if (process.getClass().getName().equals("java.lang.ProcessImpl")) {
-                Field field = process.getClass().getDeclaredField("pid");
-                field.setAccessible(true);
-                return field.getLong(process);
-            }
-        } catch (Exception e) {
-            // ignore
-        }
-        return 0;
+        return process.pid();
     }
 
     // ========== PID 文件读写 ==========
