@@ -24,7 +24,7 @@ public class ServiceConfig {
         ServiceInfo mysql = new ServiceInfo("MySQL", ServiceType.WINDOWS_SERVICE, "MySQL80", 3306, "数据库");
         list.add(mysql);
 
-        ServiceInfo redis = new ServiceInfo("Redis", ServiceType.WINDOWS_SERVICE, "redis-x64-3.0.504", 6379, "缓存");
+        ServiceInfo redis = new ServiceInfo("Redis", ServiceType.WINDOWS_SERVICE, "redis-x64-5.0.14.1", 6379, "缓存");
         list.add(redis);
 
         // Oracle：启动先监听→后主库，停止先主库→后监听

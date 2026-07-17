@@ -1,6 +1,7 @@
 package com.servicemanager.service;
 
 import com.servicemanager.model.ServiceInfo;
+import com.servicemanager.util.PortChecker;
 
 import java.io.*;
 import java.lang.reflect.Field;
@@ -19,16 +20,26 @@ public class ProcessController implements ServiceController {
 
     @Override
     public String getStatus(ServiceInfo info) {
-        // 先从内存取
+        // 1. 从内存 PID 检查
         if (info.getPid() > 0) {
             if (isPidAlive(info.getPid())) {
                 return "RUNNING";
             }
         }
-        // 再从文件恢复
+        // 2. 从文件恢复 PID
         long savedPid = loadPid(info.getName());
         if (savedPid > 0 && isPidAlive(savedPid)) {
             info.setPid(savedPid);
+            return "RUNNING";
+        }
+        // 3. PID 丢失（外部启动），用端口兜底
+        if (info.getPort() > 0 && PortChecker.isPortOpen(info.getPort())) {
+            // 从端口反查 PID 并记录
+            long portPid = findPidByPort(info.getPort());
+            if (portPid > 0) {
+                info.setPid(portPid);
+                savePid(info.getName(), portPid);
+            }
             return "RUNNING";
         }
         return "STOPPED";
@@ -109,6 +120,34 @@ public class ProcessController implements ServiceController {
         } catch (Exception e) {
             return false;
         }
+    }
+
+    /**
+     * 从端口反查 PID（用于恢复外部启动的进程 PID）
+     */
+    private long findPidByPort(int port) {
+        try {
+            ProcessBuilder pb = new ProcessBuilder("cmd", "/c",
+                    "netstat -ano | findstr \":" + port + " \" | findstr \"LISTENING\"");
+            pb.redirectErrorStream(true);
+            Process p = pb.start();
+            try (BufferedReader reader = new BufferedReader(
+                    new InputStreamReader(p.getInputStream(), "GBK"))) {
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    line = line.trim();
+                    String[] parts = line.split("\\s+");
+                    if (parts.length >= 5) {
+                        try {
+                            return Long.parseLong(parts[parts.length - 1]);
+                        } catch (NumberFormatException ignored) {}
+                    }
+                }
+            }
+        } catch (Exception e) {
+            // ignore
+        }
+        return 0;
     }
 
     /**
