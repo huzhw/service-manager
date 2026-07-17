@@ -59,6 +59,7 @@ public class MainFrame extends JFrame {
     private final JTextArea logArea;
     private final JPanel logPanel;
     private final JButton logToggleBtn;
+    private final VersionPanel versionPanel;
 
     private final WindowsServiceController winController = new WindowsServiceController();
     private final ProcessController procController = new ProcessController();
@@ -128,7 +129,19 @@ public class MainFrame extends JFrame {
 
         JScrollPane scrollPane = new JScrollPane(table);
         scrollPane.setBorder(BorderFactory.createEmptyBorder());
-        add(scrollPane, BorderLayout.CENTER);
+
+        // 服务管理面板
+        JPanel servicePanel = new JPanel(new BorderLayout());
+        servicePanel.add(scrollPane, BorderLayout.CENTER);
+
+        // 版本管理面板（共享日志回调）
+        versionPanel = new VersionPanel(this::appendLog);
+
+        // 标签页
+        JTabbedPane tabbedPane = new JTabbedPane();
+        tabbedPane.addTab("🖥  服务管理", servicePanel);
+        tabbedPane.addTab("📦  版本管理", versionPanel);
+        add(tabbedPane, BorderLayout.CENTER);
 
         // ---- 底部日志面板（默认折叠） ----
         logArea = new JTextArea();
