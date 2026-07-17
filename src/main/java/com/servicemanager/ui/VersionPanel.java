@@ -6,6 +6,8 @@ import javax.swing.border.EmptyBorder;
 import javax.swing.border.LineBorder;
 import java.awt.*;
 import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileInputStream;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.List;
@@ -116,53 +118,85 @@ public class VersionPanel extends JPanel {
     }
 
     // ==========================================
-    //  Node.js 版本管理
+    //  Node.js 版本管理（绕过 nvm.exe GUI 壳，直接读文件系统）
     // ==========================================
+
+    /** nvm 根目录（从 settings.txt 读取或默认值） */
+    private static String getNvmRoot() {
+        // 先读 nvm 的 settings.txt
+        File settingsFile = new File("F:\\nvm\\settings.txt");
+        if (settingsFile.exists()) {
+            try (BufferedReader r = new BufferedReader(
+                    new InputStreamReader(new FileInputStream(settingsFile), "GBK"))) {
+                String line;
+                while ((line = r.readLine()) != null) {
+                    if (line.startsWith("root:")) {
+                        return line.substring(5).trim();
+                    }
+                }
+            } catch (Exception ignored) {}
+        }
+        // 默认路径
+        String home = System.getenv("NVM_HOME");
+        return (home != null) ? home : "F:\\nvm";
+    }
+
     private void refreshNodeVersions() {
         new Thread(() -> {
-            // 获取当前版本
             String current = execReadLine("node --version");
             SwingUtilities.invokeLater(() ->
                     nodeCurrentLabel.setText("当前版本: " + (current != null ? current : "未检测到")));
 
-            // 获取已安装列表
-            List<String> versions = parseNvmList();
+            List<String> versions = listNvmVersions();
             final String active = current != null ? current.replace("v", "") : "";
             SwingUtilities.invokeLater(() -> buildVersionChips(nodeVersionListPanel, versions, active,
                     v -> switchNodeVersion(v)));
         }).start();
     }
 
-    private List<String> parseNvmList() {
+    /** 通过读取 nvm 目录下的 v* 文件夹获取已安装版本列表 */
+    private List<String> listNvmVersions() {
         List<String> list = new ArrayList<>();
-        try {
-            String output = exec("nvm list");
-            if (output != null) {
-                for (String line : output.split("\n")) {
-                    line = line.trim();
-                    // nvm list 输出格式：  * 18.17.0 (Currently using...)  或  16.14.0
-                    if (line.matches(".*\\d+\\.\\d+\\.\\d+.*")) {
-                        String ver = line.replaceAll(".*?(\\d+\\.\\d+\\.\\d+).*", "$1");
-                        if (!list.contains(ver)) {
-                            list.add(ver);
-                        }
-                    }
+        File nvmRoot = new File(getNvmRoot());
+        File[] dirs = nvmRoot.listFiles(f -> f.isDirectory() && f.getName().startsWith("v"));
+        if (dirs != null) {
+            for (File d : dirs) {
+                String name = d.getName();
+                if (name.startsWith("v")) {
+                    list.add(name.substring(1)); // "v20.17.0" → "20.17.0"
                 }
             }
-        } catch (Exception e) {
-            logger.accept("✗ nvm list 解析失败: " + e.getMessage());
         }
+        // 版本排序（新版本在前）
+        list.sort((a, b) -> compareVersions(b, a));
         return list;
+    }
+
+    /** 简单语义版本比较 */
+    private static int compareVersions(String a, String b) {
+        String[] pa = a.split("\\.");
+        String[] pb = b.split("\\.");
+        for (int i = 0; i < Math.max(pa.length, pb.length); i++) {
+            int va = i < pa.length ? Integer.parseInt(pa[i]) : 0;
+            int vb = i < pb.length ? Integer.parseInt(pb[i]) : 0;
+            if (va != vb) return Integer.compare(va, vb);
+        }
+        return 0;
     }
 
     private void switchNodeVersion(String version) {
         new Thread(() -> {
             logger.accept("→ 切换 Node.js 到 " + version + " ...");
-            String output = exec("nvm use " + version);
-            if (output != null && output.contains("now using")) {
+            // nvm.exe 检测非终端环境会弹对话框，用 start /min 创建隐藏窗口绕过
+            exec("start /min nvm use " + version + " 2>&1");
+            // 等待生效
+            try { Thread.sleep(2000); } catch (InterruptedException ignored) {}
+            String current = execReadLine("node --version");
+            if (current != null && current.contains(version)) {
                 logger.accept("  ✓ Node.js 已切换至 " + version);
-            } else if (output != null) {
-                logger.accept("  " + output.trim());
+            } else {
+                logger.accept("  ⚠ 切换后当前版本: " + (current != null ? current : "未知")
+                        + "，请检查 nvm 是否正常");
             }
             SwingUtilities.invokeLater(this::refreshNodeVersions);
         }).start();
