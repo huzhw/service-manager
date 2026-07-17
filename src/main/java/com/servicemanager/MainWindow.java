@@ -6,6 +6,7 @@ import com.servicemanager.service.WindowsServiceController;
 import com.servicemanager.ui.VersionPanel;
 import com.servicemanager.ui.PortToolPanel;
 import com.servicemanager.ui.FileAssocPanel;
+import com.servicemanager.ui.DockerPanel;
 import com.servicemanager.util.LogManager;
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
@@ -124,6 +125,7 @@ public class MainWindow extends AnchorPane {
                 {"📦  版本管理", "version"},
                 {"🔌  端口工具", "port"},
                 {"📄  文件关联", "fileassoc"},
+                {"🐳  Docker", "docker"},
         };
 
         for (String[] item : items) {
@@ -141,6 +143,7 @@ public class MainWindow extends AnchorPane {
                     case "version": showVersionTab(); break;
                     case "port": showPortTab(); break;
                     case "fileassoc": showFileAssocTab(); break;
+                    case "docker": showDockerTab(); break;
                 }
             });
             nav.getChildren().add(btn);
@@ -203,6 +206,11 @@ public class MainWindow extends AnchorPane {
     private void showFileAssocTab() {
         FileAssocPanel fp = new FileAssocPanel(LogManager::log);
         contentArea.getChildren().setAll(fp);
+    }
+
+    private void showDockerTab() {
+        DockerPanel dp = new DockerPanel(LogManager::log);
+        contentArea.getChildren().setAll(dp);
     }
 
     // ==========================================

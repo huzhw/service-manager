@@ -401,3 +401,15 @@
     -fx-font-size: 11px;
     -fx-padding: 4 0 0 0;
 }
+
+/* === Docker Panel === */
+.docker-card {
+    -fx-background-color: -bg-card;
+    -fx-border-color: -border;
+    -fx-border-width: 1;
+    -fx-border-radius: 8;
+    -fx-background-radius: 8;
+    -fx-padding: 14 20 14 20;
+    -fx-spacing: 10;
+    -fx-min-width: 600;
+}
