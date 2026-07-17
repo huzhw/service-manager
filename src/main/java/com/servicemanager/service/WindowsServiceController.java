@@ -46,17 +46,30 @@ public class WindowsServiceController implements ServiceController {
             ProcessBuilder pb = new ProcessBuilder("sc", "start", info.getIdentifier());
             pb.redirectErrorStream(true);
             Process p = pb.start();
+            StringBuilder sb = new StringBuilder();
             try (BufferedReader reader = new BufferedReader(new InputStreamReader(p.getInputStream(), "GBK"))) {
-                StringBuilder sb = new StringBuilder();
                 String line;
                 while ((line = reader.readLine()) != null) {
                     sb.append(line);
                 }
-                p.waitFor();
-                String output = sb.toString();
-                // sc start 成功后会包含服务名
-                return output.contains(info.getIdentifier()) || p.exitValue() == 0;
             }
+            p.waitFor();
+            String output = sb.toString();
+
+            // sc start 失败检测
+            if (output.contains("FAILED") || output.contains("1056") || output.contains("拒绝访问")) {
+                return false;
+            }
+
+            // 轮询等待服务真正启动（最多 15 秒）
+            for (int i = 0; i < 30; i++) {
+                Thread.sleep(500);
+                String status = getStatus(info);
+                if ("RUNNING".equals(status)) {
+                    return true;
+                }
+            }
+            return false; // 超时未启动
         } catch (Exception e) {
             return false;
         }
@@ -68,16 +81,30 @@ public class WindowsServiceController implements ServiceController {
             ProcessBuilder pb = new ProcessBuilder("sc", "stop", info.getIdentifier());
             pb.redirectErrorStream(true);
             Process p = pb.start();
+            StringBuilder sb = new StringBuilder();
             try (BufferedReader reader = new BufferedReader(new InputStreamReader(p.getInputStream(), "GBK"))) {
-                StringBuilder sb = new StringBuilder();
                 String line;
                 while ((line = reader.readLine()) != null) {
                     sb.append(line);
                 }
-                p.waitFor();
-                // sc stop 异步操作，返回成功不一定立刻停止
-                return true;
             }
+            p.waitFor();
+            String output = sb.toString();
+
+            // 检查是否有明确的错误
+            if (output.contains("FAILED") || output.contains("1062") || output.contains("拒绝访问")) {
+                return false;
+            }
+
+            // 轮询等待服务真正停止（最多 10 秒）
+            for (int i = 0; i < 20; i++) {
+                Thread.sleep(500);
+                String status = getStatus(info);
+                if ("STOPPED".equals(status)) {
+                    return true;
+                }
+            }
+            return false; // 超时未停止
         } catch (Exception e) {
             return false;
         }

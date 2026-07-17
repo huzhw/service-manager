@@ -112,11 +112,20 @@ public class ProcessController implements ServiceController {
             Process p = pb.start();
             p.waitFor();
 
-            // 清除 PID 记录
-            info.setPid(0);
-            deletePid(info.getName());
+            if (p.exitValue() != 0) {
+                return false;
+            }
 
-            return p.exitValue() == 0;
+            // 验证进程已停止（最多等 5 秒）
+            for (int i = 0; i < 10; i++) {
+                Thread.sleep(500);
+                if (!isPidAlive(pid)) {
+                    info.setPid(0);
+                    deletePid(info.getName());
+                    return true;
+                }
+            }
+            return false; // 超时未停止
         } catch (Exception e) {
             return false;
         }
