@@ -26,6 +26,7 @@ public class PortToolPanel extends VBox {
 
     private String currentPid;
     private String currentProcName;
+    private final java.util.Map<Integer, Button> chipMap = new java.util.LinkedHashMap<>();
 
     /** 常用端口列表 */
     private static final int[] COMMON_PORTS = {
@@ -65,6 +66,16 @@ public class PortToolPanel extends VBox {
 
         // ====== 常用端口快捷区 ======
         VBox quickPanel = createCard("⚡ 常用端口快捷查杀");
+
+        Button killAllBtn = new Button("🗑 一键全部杀掉");
+        killAllBtn.getStyleClass().addAll("port-btn", "danger");
+        killAllBtn.setStyle(killAllBtn.getStyle() + "-fx-font-size: 13px;");
+
+        Label batchResultLabel = new Label("");
+        batchResultLabel.setStyle("-fx-font-size: 12px; -fx-padding: 4 0 0 0;");
+
+        killAllBtn.setOnAction(e -> killAllCommonPorts(killAllBtn, batchResultLabel));
+
         FlowPane chipsPanel = new FlowPane(6, 6);
         chipsPanel.setPrefWrapLength(560);
 
@@ -74,8 +85,9 @@ public class PortToolPanel extends VBox {
             chip.setTooltip(new Tooltip("查找并终止端口 " + port));
             chip.setOnAction(e -> quickKill(port, chip));
             chipsPanel.getChildren().add(chip);
+            chipMap.put(port, chip);
         }
-        quickPanel.getChildren().add(chipsPanel);
+        quickPanel.getChildren().addAll(killAllBtn, batchResultLabel, chipsPanel);
         getChildren().add(quickPanel);
 
         // Spacer
@@ -180,6 +192,69 @@ public class PortToolPanel extends VBox {
                 logger.accept("  ✓ 端口 " + port + " 未被占用");
             }
             Platform.runLater(() -> chip.setDisable(false));
+        }).start();
+    }
+
+    /**
+     * 一键杀掉所有常用端口占用的进程，实时显示进度
+     */
+    private void killAllCommonPorts(Button btn, Label statusLabel) {
+        btn.setDisable(true);
+        new Thread(() -> {
+            int killed = 0, clean = 0;
+            for (int i = 0; i < COMMON_PORTS.length; i++) {
+                int port = COMMON_PORTS[i];
+                final int progress = i + 1;
+                Platform.runLater(() ->
+                        statusLabel.setText("查杀中 " + progress + "/" + COMMON_PORTS.length + " — 端口 " + port + " ..."));
+
+                String pid = findPidByPort(port);
+                if (pid != null) {
+                    String procName = findProcName(pid);
+                    logger.accept("→ 端口 " + port + " → PID " + pid
+                            + (procName != null ? " (" + procName + ")" : "") + " → taskkill ...");
+                    String output = exec("taskkill /F /PID " + pid);
+                    if (output != null && output.contains("成功")) {
+                        logger.accept("  ✓ 端口 " + port + " 已释放");
+                        killed++;
+                        Platform.runLater(() -> {
+                            Button chip = chipMap.get(port);
+                            if (chip != null) {
+                                chip.setStyle("-fx-background-color: #c8e6c9; -fx-text-fill: #2e7d32;"
+                                        + " -fx-font-size: 11px; -fx-padding: 4 12 4 12;"
+                                        + " -fx-background-radius: 10; -fx-border-color: #a5d6a7;"
+                                        + " -fx-border-width: 1; -fx-border-radius: 10;");
+                                chip.setText("✓ " + port);
+                            }
+                        });
+                    } else {
+                        logger.accept("  ✗ 端口 " + port + " 终止失败");
+                    }
+                } else {
+                    clean++;
+                    Platform.runLater(() -> {
+                        Button chip = chipMap.get(port);
+                        if (chip != null) {
+                            chip.setStyle("-fx-background-color: #e8e8e8; -fx-text-fill: #9e9e9e;"
+                                    + " -fx-font-size: 11px; -fx-padding: 4 12 4 12;"
+                                    + " -fx-background-radius: 10; -fx-border-color: #e0e0e0;"
+                                    + " -fx-border-width: 1; -fx-border-radius: 10;");
+                        }
+                    });
+                }
+            }
+            final int done = killed, free = clean;
+            Platform.runLater(() -> {
+                btn.setDisable(false);
+                if (done > 0) {
+                    statusLabel.setText("✓ 已释放 " + done + " 个端口" + (free > 0 ? "，" + free + " 个原本空闲" : ""));
+                    statusLabel.setStyle("-fx-font-size: 12px; -fx-text-fill: #4caf50; -fx-padding: 4 0 0 0;");
+                } else {
+                    statusLabel.setText("全部 " + free + " 个端口均未被占用");
+                    statusLabel.setStyle("-fx-font-size: 12px; -fx-text-fill: #909399; -fx-padding: 4 0 0 0;");
+                }
+            });
+            logger.accept("✓ 批量查杀完成: 已释放 " + done + " 个, 原本空闲 " + free + " 个");
         }).start();
     }
 
