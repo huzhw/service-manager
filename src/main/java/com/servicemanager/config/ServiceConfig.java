@@ -23,15 +23,18 @@ public class ServiceConfig {
 
         ServiceInfo mysql = new ServiceInfo("MySQL", ServiceType.WINDOWS_SERVICE, "MySQL80", 3306, "数据库");
         mysql.setVersion("8.0");
+        mysql.setWorkingDir("C:\\Program Files\\MySQL\\MySQL Server 8.0");
         list.add(mysql);
 
         ServiceInfo redis = new ServiceInfo("Redis", ServiceType.WINDOWS_SERVICE, "redis-x64-5.0.14.1", 6379, "缓存");
         redis.setVersion("5.0.14");
+        redis.setWorkingDir("F:\\Program Files\\Redis-x64-5.0.14.1");
         list.add(redis);
 
         // Oracle：启动先监听→后主库，停止先主库→后监听
         ServiceInfo oracleDb = new ServiceInfo("Oracle 主库", ServiceType.WINDOWS_SERVICE, "OracleServiceORCL", 1521, "数据库");
         oracleDb.setVersion("11g");
+        oracleDb.setWorkingDir("D:\\app\\Administrator\\product\\11.2.0\\dbhome_1");
         oracleDb.setStartOrder(2);
         oracleDb.setStopOrder(1);
         oracleDb.setGroupName("Oracle");
@@ -39,6 +42,7 @@ public class ServiceConfig {
 
         ServiceInfo oracleListener = new ServiceInfo("Oracle 监听", ServiceType.WINDOWS_SERVICE, "OracleOraDb11g_home1TNSListener", 1521, "数据库");
         oracleListener.setVersion("11g");
+        oracleListener.setWorkingDir("D:\\app\\Administrator\\product\\11.2.0\\dbhome_1");
         oracleListener.setStartOrder(1);
         oracleListener.setStopOrder(2);
         oracleListener.setGroupName("Oracle");
@@ -46,10 +50,12 @@ public class ServiceConfig {
 
         ServiceInfo dm = new ServiceInfo("达梦 DM8", ServiceType.WINDOWS_SERVICE, "DmServiceDMSERVER", 5236, "数据库");
         dm.setVersion("DM8");
+        dm.setWorkingDir("D:\\dmdbms");
         list.add(dm);
 
         ServiceInfo pg = new ServiceInfo("PostgreSQL", ServiceType.WINDOWS_SERVICE, "postgresql-x64-16", 5432, "数据库");
         pg.setVersion("16");
+        pg.setWorkingDir("D:\\PostgreSQL\\16");
         list.add(pg);
 
         // ========== 进程类 ==========
