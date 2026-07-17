@@ -72,6 +72,36 @@
     "startTime": 0
   },
   {
+    "name": "人大金仓-Oracle",
+    "type": "PROCESS",
+    "identifier": "\"D:\\tools\\KingbaseES-orcle\\V9\\KESRealPro\\V009R002C014\\Server\\bin\\sys_ctl.exe\" -D \"D:\\tools\\KingbaseES-orcle\\V9\\KESRealPro\\V009R002C014\\data\" -l \"D:\\tools\\KingbaseES-orcle\\V9\\KESRealPro\\V009R002C014\\data\\logfile\" start",
+    "workingDir": "D:\\tools\\KingbaseES-orcle\\V9\\KESRealPro\\V009R002C014",
+    "processName": "kingbase.exe",
+    "port": 54321,
+    "category": "数据库",
+    "version": "V9R2C14",
+    "startOrder": 0,
+    "stopOrder": 0,
+    "status": "UNKNOWN",
+    "pid": 0,
+    "startTime": 0
+  },
+  {
+    "name": "人大金仓-全兼容",
+    "type": "PROCESS",
+    "identifier": "\"D:\\tools\\KingbaseES\\V9\\KESRealPro\\V009R001C010\\Server\\bin\\sys_ctl.exe\" -D \"D:\\tools\\KingbaseES\\V9\\KESRealPro\\V009R001C010\\data\" -l \"D:\\tools\\KingbaseES\\V9\\KESRealPro\\V009R001C010\\data\\logfile\" start",
+    "workingDir": "D:\\tools\\KingbaseES\\V9\\KESRealPro\\V009R001C010",
+    "processName": "kingbase.exe",
+    "port": 54322,
+    "category": "数据库",
+    "version": "V9R1C10",
+    "startOrder": 0,
+    "stopOrder": 0,
+    "status": "UNKNOWN",
+    "pid": 0,
+    "startTime": 0
+  },
+  {
     "name": "Redis",
     "type": "WINDOWS_SERVICE",
     "identifier": "redis-x64-5.0.14.1",
