@@ -105,10 +105,21 @@ public class ProcessController implements ServiceController {
             if (pid > 0 && isPidAlive(pid)) {
                 return true;
             }
-            // 父进程（powershell/cmd脚本）可能已退出，但子进程还在启动中
-            // 有端口则用端口兜底验证（Nacos 3.x 需 ~15s）
+            // 父进程已退出（sys_ctl.exe/pg_ctl.exe 等一次性启动器），
+            // 从 processName 反查实际服务进程 PID
+            String procName = info.getProcessName();
+            if (procName != null && !procName.isEmpty()) {
+                Thread.sleep(3000);
+                long childPid = findPidByName(procName);
+                if (childPid > 0) {
+                    info.setPid(childPid);
+                    savePid(info.getName(), childPid);
+                    return true;
+                }
+            }
+            // 最后兜底：等端口监听
             if (info.getPort() > 0) {
-                Thread.sleep(23000);
+                Thread.sleep(15000);
                 if (PortChecker.isPortOpen(info.getPort())) {
                     long portPid = findPidByPort(info.getPort());
                     if (portPid > 0) {
@@ -144,15 +155,6 @@ public class ProcessController implements ServiceController {
             if (p.exitValue() != 0) {
                 return false;
             }
-            // nginx 多进程守护：补一刀进程名全杀
-            String processName = info.getProcessName();
-            if (processName != null && !processName.isEmpty()
-                    && !"java.exe".equalsIgnoreCase(processName)) {
-                ProcessBuilder pb2 = new ProcessBuilder("taskkill", "/IM", processName, "/F");
-                pb2.redirectErrorStream(true);
-                pb2.start().waitFor();
-            }
-
             // 验证进程已停止（最多等 5 秒）
             for (int i = 0; i < 10; i++) {
                 Thread.sleep(500);
@@ -197,6 +199,35 @@ public class ProcessController implements ServiceController {
     }
 
     /**
+     * 从进程名反查 PID（用于 sys_ctl.exe 等启动器退出后找到实际服务进程）
+     */
+    private long findPidByName(String processName) {
+        try {
+            ProcessBuilder pb = new ProcessBuilder("tasklist", "/FI",
+                    "IMAGENAME eq " + processName, "/NH");
+            pb.redirectErrorStream(true);
+            Process p = pb.start();
+            try (BufferedReader reader = new BufferedReader(
+                    new InputStreamReader(p.getInputStream(), "GBK"))) {
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    if (line.contains(processName)) {
+                        String[] parts = line.trim().split("\\s+");
+                        if (parts.length >= 2) {
+                            try {
+                                return Long.parseLong(parts[1]);
+                            } catch (NumberFormatException ignored) {}
+                        }
+                    }
+                }
+            }
+        } catch (Exception e) {
+            // ignore
+        }
+        return 0;
+    }
+
+    /**
      * 检查 PID 是否存活
      */
     private boolean isPidAlive(long pid) {
@@ -222,37 +253,43 @@ public class ProcessController implements ServiceController {
     /**
      * 构建直接进程（不用 cmd /c 包裹，避免子进程权限问题）
      * <p>
-     * 自动分离可执行文件路径与参数
+     * 按 Windows 命令行规则解析，正确处理双引号包裹的路径
      */
     private ProcessBuilder buildDirectProcess(String cmd) {
-        // 找到可执行文件路径：查找 .exe/.bat/.cmd 结尾
-        String lower = cmd.toLowerCase();
-        int exeEnd = -1;
-        for (String ext : new String[]{".exe", ".bat", ".cmd"}) {
-            int idx = lower.indexOf(ext);
-            if (idx >= 0) {
-                exeEnd = idx + ext.length();
-                break;
-            }
+        List<String> parts = parseCommandLine(cmd);
+        if (parts.isEmpty()) {
+            return new ProcessBuilder(cmd);
         }
+        return new ProcessBuilder(parts);
+    }
 
-        List<String> cmdList = new ArrayList<>();
-        if (exeEnd > 0 && exeEnd < cmd.length()) {
-            // 有参数的情况
-            cmdList.add(cmd.substring(0, exeEnd));
-            String rest = cmd.substring(exeEnd).trim();
-            if (!rest.isEmpty()) {
-                for (String arg : rest.split("\\s+")) {
-                    if (!arg.isEmpty()) {
-                        cmdList.add(arg);
-                    }
+    /**
+     * 按 Windows 命令行规则拆分可执行文件和参数
+     * <p>
+     * 正确处理双引号包裹的路径，如 {@code "D:\a b\app.exe" -D "D:\data dir"}
+     * → {@code ["D:\a b\app.exe", "-D", "D:\data dir"]}
+     */
+    private List<String> parseCommandLine(String cmd) {
+        List<String> result = new ArrayList<>();
+        StringBuilder current = new StringBuilder();
+        boolean inQuotes = false;
+        for (int i = 0; i < cmd.length(); i++) {
+            char c = cmd.charAt(i);
+            if (c == '"') {
+                inQuotes = !inQuotes;
+            } else if (c == ' ' && !inQuotes) {
+                if (current.length() > 0) {
+                    result.add(current.toString());
+                    current.setLength(0);
                 }
+            } else {
+                current.append(c);
             }
-        } else {
-            // 纯路径，无参数（如 Nginx）
-            cmdList.add(cmd);
         }
-        return new ProcessBuilder(cmdList);
+        if (current.length() > 0) {
+            result.add(current.toString());
+        }
+        return result;
     }
 
     /**
