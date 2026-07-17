@@ -114,7 +114,7 @@ public class MainFrame extends JFrame {
         table.getColumnModel().getColumn(0).setMaxWidth(40);
         table.getColumnModel().getColumn(1).setPreferredWidth(110);
         table.getColumnModel().getColumn(1).setMaxWidth(150);
-        table.getColumnModel().getColumn(2).setMaxWidth(90);
+        table.getColumnModel().getColumn(2).setMaxWidth(110);
         table.getColumnModel().getColumn(3).setMaxWidth(60);
         table.getColumnModel().getColumn(4).setMaxWidth(140);
         table.getColumnModel().getColumn(5).setMaxWidth(80);
@@ -136,7 +136,13 @@ public class MainFrame extends JFrame {
                 int row = table.rowAtPoint(e.getPoint());
                 if (col == 5 && row >= 0) {
                     ServiceInfo svc = tableModel.getServiceAt(row);
-                    triggerSingleAction(svc, "RUNNING".equals(svc.getStatus()));
+                    boolean stopping = "RUNNING".equals(svc.getStatus());
+                    int confirm = JOptionPane.showConfirmDialog(MainFrame.this,
+                            (stopping ? "确定停止 " : "确定启动 ") + svc.getName() + "？",
+                            "确认操作", JOptionPane.YES_NO_OPTION);
+                    if (confirm == JOptionPane.YES_OPTION) {
+                        triggerSingleAction(svc, stopping);
+                    }
                 }
             }
         });
@@ -223,8 +229,18 @@ public class MainFrame extends JFrame {
         add(bottomBar, BorderLayout.SOUTH);
 
         // ---- 事件绑定 ----
-        startAllBtn.addActionListener(e -> startAllServices());
-        stopAllBtn.addActionListener(e -> stopAllServices());
+        startAllBtn.addActionListener(e -> {
+            if (JOptionPane.YES_OPTION == JOptionPane.showConfirmDialog(MainFrame.this,
+                    "确定要按顺序启动全部服务？", "确认", JOptionPane.YES_NO_OPTION)) {
+                startAllServices();
+            }
+        });
+        stopAllBtn.addActionListener(e -> {
+            if (JOptionPane.YES_OPTION == JOptionPane.showConfirmDialog(MainFrame.this,
+                    "确定要按顺序停止全部服务？", "确认", JOptionPane.YES_NO_OPTION)) {
+                stopAllServices();
+            }
+        });
         refreshBtn.addActionListener(e -> refreshAllStatus());
         themeBtn.addActionListener(e -> toggleTheme(themeBtn));
 
