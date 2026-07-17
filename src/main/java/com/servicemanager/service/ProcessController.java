@@ -5,6 +5,8 @@ import com.servicemanager.util.PortChecker;
 
 import java.io.*;
 import java.lang.reflect.Field;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Properties;
 
 /**
@@ -65,8 +67,8 @@ public class ProcessController implements ServiceController {
                 // bat 脚本
                 pb = new ProcessBuilder("cmd", "/c", cmd.substring("cmd /c ".length()));
             } else {
-                // 直接可执行文件（用 cmd /c 包裹，避免路径含空格时 split 出错）
-                pb = new ProcessBuilder("cmd", "/c", cmd);
+                // 直接可执行文件，避免 cmd /c 包裹导致进程保护问题
+                pb = buildDirectProcess(cmd);
             }
 
             // 设置工作目录
@@ -88,13 +90,13 @@ public class ProcessController implements ServiceController {
 
             // 等待一小段时间确认启动
             Thread.sleep(2000);
-            if (isPidAlive(pid)) {
+            if (pid > 0 && isPidAlive(pid)) {
                 return true;
             }
             // 父进程（powershell/cmd脚本）可能已退出，但子进程还在启动中
-            // 有端口则用端口兜底验证
+            // 有端口则用端口兜底验证（Nacos 3.x 需 ~15s）
             if (info.getPort() > 0) {
-                Thread.sleep(3000); // 给子进程更多启动时间
+                Thread.sleep(13000);
                 if (PortChecker.isPortOpen(info.getPort())) {
                     long portPid = findPidByPort(info.getPort());
                     if (portPid > 0) {
@@ -122,14 +124,25 @@ public class ProcessController implements ServiceController {
         }
 
         try {
-            // taskkill /T 同时终止子进程
-            ProcessBuilder pb = new ProcessBuilder("taskkill", "/PID", String.valueOf(pid), "/T", "/F");
-            pb.redirectErrorStream(true);
-            Process p = pb.start();
-            p.waitFor();
-
-            if (p.exitValue() != 0) {
-                return false;
+            // 优先用 processName 全杀（比 /T 更可靠，能清理 nginx 这类多进程守护）
+            String processName = info.getProcessName();
+            boolean killed = false;
+            if (processName != null && !processName.isEmpty()) {
+                ProcessBuilder pb = new ProcessBuilder("taskkill", "/IM", processName, "/F");
+                pb.redirectErrorStream(true);
+                Process p = pb.start();
+                p.waitFor();
+                killed = (p.exitValue() == 0);
+            }
+            // 兜底用 PID
+            if (!killed) {
+                ProcessBuilder pb = new ProcessBuilder("taskkill", "/PID", String.valueOf(pid), "/F");
+                pb.redirectErrorStream(true);
+                Process p = pb.start();
+                p.waitFor();
+                if (p.exitValue() != 0) {
+                    return false;
+                }
             }
 
             // 验证进程已停止（最多等 5 秒）
@@ -196,6 +209,42 @@ public class ProcessController implements ServiceController {
             // ignore
         }
         return false;
+    }
+
+    /**
+     * 构建直接进程（不用 cmd /c 包裹，避免子进程权限问题）
+     * <p>
+     * 自动分离可执行文件路径与参数
+     */
+    private ProcessBuilder buildDirectProcess(String cmd) {
+        // 找到可执行文件路径：查找 .exe/.bat/.cmd 结尾
+        String lower = cmd.toLowerCase();
+        int exeEnd = -1;
+        for (String ext : new String[]{".exe", ".bat", ".cmd"}) {
+            int idx = lower.indexOf(ext);
+            if (idx >= 0) {
+                exeEnd = idx + ext.length();
+                break;
+            }
+        }
+
+        List<String> cmdList = new ArrayList<>();
+        if (exeEnd > 0 && exeEnd < cmd.length()) {
+            // 有参数的情况
+            cmdList.add(cmd.substring(0, exeEnd));
+            String rest = cmd.substring(exeEnd).trim();
+            if (!rest.isEmpty()) {
+                for (String arg : rest.split("\\s+")) {
+                    if (!arg.isEmpty()) {
+                        cmdList.add(arg);
+                    }
+                }
+            }
+        } else {
+            // 纯路径，无参数（如 Nginx）
+            cmdList.add(cmd);
+        }
+        return new ProcessBuilder(cmdList);
     }
 
     /**
