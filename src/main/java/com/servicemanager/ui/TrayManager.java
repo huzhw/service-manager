@@ -1,5 +1,8 @@
 package com.servicemanager.ui;
 
+import com.servicemanager.MainWindow;
+import javafx.application.Platform;
+
 import java.awt.*;
 
 /**
@@ -8,96 +11,90 @@ import java.awt.*;
 public class TrayManager {
 
     private TrayIcon trayIcon;
-    private final MainFrame mainFrame;
+    private final MainWindow mainWindow;
     private MenuItem autoStartItem;
+    private boolean running = true;
 
-    public TrayManager(MainFrame mainFrame) {
-        this.mainFrame = mainFrame;
+    public TrayManager(MainWindow mainWindow) {
+        this.mainWindow = mainWindow;
 
         if (!SystemTray.isSupported()) {
-            System.err.println("当前系统不支持系统托盘");
+            System.err.println("Tray not supported");
             return;
         }
 
-        // 使用 AppIcon 生成托盘图标
         Image image = AppIcon.createTrayIcon();
-
-        trayIcon = new TrayIcon(image, "服务管理面板", buildMenu());
+        trayIcon = new TrayIcon(image, "Service Manager", buildMenu());
 
         try {
             SystemTray.getSystemTray().add(trayIcon);
-            // 双击托盘图标显示面板
-            trayIcon.addActionListener(e -> mainFrame.setVisible(true));
+            trayIcon.addActionListener(e -> {
+                javafx.stage.Stage stage = (javafx.stage.Stage) mainWindow.getScene().getWindow();
+                stage.setIconified(false);
+                stage.toFront();
+            });
         } catch (AWTException e) {
-            System.err.println("无法添加托盘图标: " + e.getMessage());
+            System.err.println("Tray add failed: " + e.getMessage());
         }
     }
 
-    /**
-     * 构建托盘右键菜单
-     */
     private PopupMenu buildMenu() {
         PopupMenu menu = new PopupMenu();
 
-        MenuItem showItem = new MenuItem("显示面板");
-        showItem.addActionListener(e -> mainFrame.setVisible(true));
+        MenuItem showItem = new MenuItem("Show Panel");
+        showItem.addActionListener(e -> {
+            javafx.stage.Stage stage = (javafx.stage.Stage) mainWindow.getScene().getWindow();
+            stage.setIconified(false);
+            stage.toFront();
+        });
         menu.add(showItem);
 
         menu.addSeparator();
 
-        MenuItem startAllItem = new MenuItem("启动全部");
-        startAllItem.addActionListener(e -> mainFrame.startAllServices());
+        MenuItem startAllItem = new MenuItem("Start All");
+        startAllItem.addActionListener(e -> mainWindow.startAllServices());
         menu.add(startAllItem);
 
-        MenuItem stopAllItem = new MenuItem("停止全部");
-        stopAllItem.addActionListener(e -> mainFrame.stopAllServices());
+        MenuItem stopAllItem = new MenuItem("Stop All");
+        stopAllItem.addActionListener(e -> mainWindow.stopAllServices());
         menu.add(stopAllItem);
 
         menu.addSeparator();
 
-        // 开机自启菜单项
         boolean isAutoStart = StartupManager.isAutoStartEnabled();
-        autoStartItem = new MenuItem(isAutoStart ? "✓ 开机自启（已启用）" : "开机自启（未启用）");
+        autoStartItem = new MenuItem(isAutoStart ? "V  Auto-start (ON)" : "Auto-start (OFF)");
         autoStartItem.addActionListener(e -> toggleAutoStart());
         menu.add(autoStartItem);
 
         menu.addSeparator();
 
-        MenuItem exitItem = new MenuItem("退出");
+        MenuItem exitItem = new MenuItem("Exit");
         exitItem.addActionListener(e -> exit());
         menu.add(exitItem);
 
         return menu;
     }
 
-    /**
-     * 切换开机自启
-     */
     private void toggleAutoStart() {
         boolean current = StartupManager.isAutoStartEnabled();
         if (current) {
             StartupManager.disableAutoStart();
-            autoStartItem.setLabel("开机自启（未启用）");
+            autoStartItem.setLabel("Auto-start (OFF)");
         } else {
             StartupManager.enableAutoStart();
-            autoStartItem.setLabel("✓ 开机自启（已启用）");
+            autoStartItem.setLabel("V  Auto-start (ON)");
         }
     }
 
-    /**
-     * 完全退出程序
-     */
-    private void exit() {
-        mainFrame.stopTimer();
+    public void exit() {
+        running = false;
         if (trayIcon != null) {
             SystemTray.getSystemTray().remove(trayIcon);
         }
+        Platform.exit();
         System.exit(0);
     }
 
-    /**
-     * 显示气泡通知
-     */
     public void showNotification(String title, String message) {
         if (trayIcon != null) {
             trayIcon.displayMessage(title, message, TrayIcon.MessageType.INFO);

@@ -1,8 +1,5 @@
 package com.servicemanager.ui;
 
-import com.formdev.flatlaf.FlatDarkLaf;
-import com.formdev.flatlaf.FlatIntelliJLaf;
-import com.formdev.flatlaf.FlatLaf;
 import com.servicemanager.model.ServiceInfo;
 import com.servicemanager.model.ServiceType;
 import com.servicemanager.service.ProcessController;
@@ -289,13 +286,9 @@ public class MainFrame extends JFrame {
     // ==========================================
     private void applyTheme() {
         try {
-            if (darkMode) {
-                UIManager.setLookAndFeel(new FlatDarkLaf());
-            } else {
-                UIManager.setLookAndFeel(new FlatIntelliJLaf());
-            }
+            UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
         } catch (Exception e) {
-            System.err.println("主题加载失败: " + e.getMessage());
+            System.err.println("Theme failed: " + e.getMessage());
         }
     }
 
@@ -303,16 +296,12 @@ public class MainFrame extends JFrame {
         darkMode = !darkMode;
         prefs.put(PREF_THEME, darkMode ? "dark" : "light");
         try {
-            if (darkMode) {
-                UIManager.setLookAndFeel(new FlatDarkLaf());
-            } else {
-                UIManager.setLookAndFeel(new FlatIntelliJLaf());
-            }
-            FlatLaf.updateUI();
-            themeBtn.setText(darkMode ? "☀  亮色" : "🌙  暗色");
-            appendLog(darkMode ? "已切换为暗色主题" : "已切换为亮色主题");
+            UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
+            SwingUtilities.updateComponentTreeUI(this);
+            themeBtn.setText(darkMode ? "☀  Light" : "🌙  Dark");
+            appendLog(darkMode ? "Switched to light theme" : "Switched to dark theme");
         } catch (Exception e) {
-            appendLog("✗ 主题切换失败: " + e.getMessage());
+            appendLog("✗ Theme switch failed: " + e.getMessage());
         }
     }
 
