@@ -1,0 +1,1 @@
+- [JavaFX改造设计](memory/JavaFX改造设计.md) — Swing→JavaFX 迁移方案、架构、技术选型
