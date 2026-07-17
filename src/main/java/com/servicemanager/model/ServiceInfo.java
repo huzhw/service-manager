@@ -41,6 +41,9 @@ public class ServiceInfo {
     /** 进程 PID（仅进程类型） */
     private long pid;
 
+    /** 版本号 */
+    private String version;
+
     /** 启动时间戳（毫秒），0 = 未启动 */
     private long startTime;
 
@@ -153,11 +156,24 @@ public class ServiceInfo {
         this.pid = pid;
     }
 
+    public String getVersion() {
+        return version;
+    }
+
+    public void setVersion(String version) {
+        this.version = version;
+    }
+
     public long getStartTime() {
         return startTime;
     }
 
     public void setStartTime(long startTime) {
         this.startTime = startTime;
+    }
+
+    @Override
+    public String toString() {
+        return name;
     }
 }
