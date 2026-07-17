@@ -1,7 +1,7 @@
 package com.servicemanager;
 
 import com.formdev.flatlaf.FlatIntelliJLaf;
-import com.servicemanager.config.ServiceConfig;
+import com.servicemanager.config.ServiceConfigLoader;
 import com.servicemanager.model.ServiceInfo;
 import com.servicemanager.ui.AppIcon;
 import com.servicemanager.ui.MainFrame;
@@ -38,7 +38,7 @@ public class App {
         }
 
         // 加载服务配置
-        List<ServiceInfo> services = ServiceConfig.buildServices();
+        List<ServiceInfo> services = ServiceConfigLoader.load();
 
         // 启动 UI
         SwingUtilities.invokeLater(() -> {
