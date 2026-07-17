@@ -42,15 +42,20 @@ public class MainFrame extends JFrame {
         setTitle("服务管理面板");
         setDefaultCloseOperation(WindowConstants.HIDE_ON_CLOSE); // 关闭→隐藏到托盘
         setSize(800, 520);
+        setMinimumSize(new Dimension(700, 450));
         setLocationRelativeTo(null);
 
         // 顶部工具栏
         JToolBar toolBar = new JToolBar();
         toolBar.setFloatable(false);
-        JButton startAllBtn = new JButton("▶ 启动全部");
-        JButton stopAllBtn = new JButton("■ 停止全部");
-        JButton refreshBtn = new JButton("↻ 刷新");
+        toolBar.setBorder(BorderFactory.createEmptyBorder(6, 8, 6, 8));
+
+        JButton startAllBtn = createToolBarButton("▶  启动全部");
+        JButton stopAllBtn = createToolBarButton("■  停止全部");
+        JButton refreshBtn = createToolBarButton("↻  刷新");
+
         toolBar.add(startAllBtn);
+        toolBar.add(Box.createHorizontalStrut(6));
         toolBar.add(stopAllBtn);
         toolBar.addSeparator();
         toolBar.add(refreshBtn);
@@ -73,7 +78,13 @@ public class MainFrame extends JFrame {
         table.getColumnModel().getColumn(5).setCellRenderer(new ButtonRenderer());
         table.getColumnModel().getColumn(5).setCellEditor(new ButtonEditor());
 
+        // 表格斑马纹 + 选中行高亮
+        table.setDefaultRenderer(Object.class, new ZebraRenderer());
+        table.setShowGrid(false);
+        table.setIntercellSpacing(new Dimension(0, 0));
+
         JScrollPane scrollPane = new JScrollPane(table);
+        scrollPane.setBorder(BorderFactory.createEmptyBorder());
         add(scrollPane, BorderLayout.CENTER);
 
         // 底部状态栏
@@ -95,6 +106,16 @@ public class MainFrame extends JFrame {
 
         // 首次刷新
         refreshAllStatus();
+    }
+
+    /**
+     * 创建工具栏按钮（统一样式）
+     */
+    private JButton createToolBarButton(String text) {
+        JButton btn = new JButton(text);
+        btn.setFocusPainted(false);
+        btn.setMargin(new Insets(6, 14, 6, 14));
+        return btn;
     }
 
     /**
@@ -250,6 +271,34 @@ public class MainFrame extends JFrame {
 
         public ServiceInfo getServiceAt(int row) {
             return list.get(row);
+        }
+    }
+
+    // ==========================================
+    //  斑马纹渲染器（隔行变色）
+    // ==========================================
+    static class ZebraRenderer extends DefaultTableCellRenderer {
+        private static final Color ZEBRA_ODD = new Color(0xF5, 0xF7, 0xFA);
+        private static final Color ZEBRA_EVEN = Color.WHITE;
+        private static final Color SELECTED_BG = new Color(0xE3, 0xF2, 0xFD); // 浅蓝选中
+
+        @Override
+        public Component getTableCellRendererComponent(JTable table, Object value,
+                                                       boolean isSelected, boolean hasFocus,
+                                                       int row, int col) {
+            Component c = super.getTableCellRendererComponent(
+                    table, value, isSelected, hasFocus, row, col);
+            if (!isSelected) {
+                c.setBackground(row % 2 == 0 ? ZEBRA_EVEN : ZEBRA_ODD);
+            } else {
+                c.setBackground(SELECTED_BG);
+                c.setForeground(Color.BLACK);
+            }
+            // 设置内边距
+            if (c instanceof JLabel) {
+                ((JLabel) c).setBorder(BorderFactory.createEmptyBorder(2, 8, 2, 8));
+            }
+            return c;
         }
     }
 

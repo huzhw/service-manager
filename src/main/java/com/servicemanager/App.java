@@ -3,6 +3,7 @@ package com.servicemanager;
 import com.formdev.flatlaf.FlatIntelliJLaf;
 import com.servicemanager.config.ServiceConfig;
 import com.servicemanager.model.ServiceInfo;
+import com.servicemanager.ui.AppIcon;
 import com.servicemanager.ui.MainFrame;
 import com.servicemanager.ui.TrayManager;
 
@@ -43,6 +44,7 @@ public class App {
         SwingUtilities.invokeLater(() -> {
             // 创建主面板
             MainFrame mainFrame = new MainFrame(services);
+            mainFrame.setIconImages(AppIcon.createWindowIcons());
             mainFrame.setVisible(true);
 
             // 创建系统托盘

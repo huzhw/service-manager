@@ -1,8 +1,6 @@
 package com.servicemanager.ui;
 
 import java.awt.*;
-import java.awt.event.ActionListener;
-import java.awt.image.BufferedImage;
 
 /**
  * 系统托盘管理
@@ -21,13 +19,8 @@ public class TrayManager {
             return;
         }
 
-        // 生成托盘图标（16x16 蓝色圆点）
-        BufferedImage image = new BufferedImage(16, 16, BufferedImage.TYPE_INT_ARGB);
-        Graphics2D g2d = image.createGraphics();
-        g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-        g2d.setColor(new Color(0x21, 0x96, 0xF3)); // Material Blue
-        g2d.fillOval(0, 0, 16, 16);
-        g2d.dispose();
+        // 使用 AppIcon 生成托盘图标
+        Image image = AppIcon.createTrayIcon();
 
         trayIcon = new TrayIcon(image, "服务管理面板", buildMenu());
 
