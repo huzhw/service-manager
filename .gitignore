@@ -8,6 +8,9 @@ dependency-reduced-pom.xml
 # Claude Code local config
 .claude/
 
+# Logs
+logs/
+
 # OS
 .DS_Store
 Thumbs.db

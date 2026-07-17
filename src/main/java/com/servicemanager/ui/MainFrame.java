@@ -8,6 +8,7 @@ import com.servicemanager.model.ServiceType;
 import com.servicemanager.service.ProcessController;
 import com.servicemanager.service.ServiceController;
 import com.servicemanager.service.WindowsServiceController;
+import com.servicemanager.util.LogManager;
 import com.servicemanager.util.PortChecker;
 
 import javax.swing.*;
@@ -154,15 +155,15 @@ public class MainFrame extends JFrame {
         servicePanel.add(scrollPane, BorderLayout.CENTER);
 
         // 版本管理面板（共享日志回调）
-        versionPanel = new VersionPanel(this::appendLog);
+        versionPanel = new VersionPanel(LogManager::log);
 
         // 标签页
         JTabbedPane tabbedPane = new JTabbedPane();
         // 端口工具面板
-        PortToolPanel portToolPanel = new PortToolPanel(this::appendLog);
+        PortToolPanel portToolPanel = new PortToolPanel(LogManager::log);
 
         // 文件关联面板
-        FileAssocPanel fileAssocPanel = new FileAssocPanel(this::appendLog);
+        FileAssocPanel fileAssocPanel = new FileAssocPanel(LogManager::log);
 
         tabbedPane.addTab("🖥  服务管理", servicePanel);
         tabbedPane.addTab("📦  版本管理", versionPanel);
@@ -215,6 +216,9 @@ public class MainFrame extends JFrame {
         // 30 秒自动刷新
         refreshTimer = new Timer(30000, e -> refreshAllStatus());
         refreshTimer.start();
+
+        // 初始化日志系统（文件 + UI 双写）
+        LogManager.init(this::appendLogUi);
 
         // 首次刷新
         refreshAllStatus();
@@ -273,13 +277,18 @@ public class MainFrame extends JFrame {
         revalidate();
     }
 
-    private void appendLog(String msg) {
+    /** UI 日志回调（仅更新面板，由 LogManager 调用） */
+    private void appendLogUi(String msg) {
         String time = TIME_FMT.format(new Date());
         SwingUtilities.invokeLater(() -> {
             logArea.append(String.format("[%s] %s%n", time, msg));
-            // 自动滚到底部
             logArea.setCaretPosition(logArea.getDocument().getLength());
         });
+    }
+
+    /** 写日志（UI + 文件双写，委托给 LogManager） */
+    private void appendLog(String msg) {
+        LogManager.log(msg);
     }
 
     // ==========================================
