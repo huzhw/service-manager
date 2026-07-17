@@ -158,8 +158,16 @@ public class MainFrame extends JFrame {
 
         // 标签页
         JTabbedPane tabbedPane = new JTabbedPane();
+        // 端口工具面板
+        PortToolPanel portToolPanel = new PortToolPanel(this::appendLog);
+
+        // 文件关联面板
+        FileAssocPanel fileAssocPanel = new FileAssocPanel(this::appendLog);
+
         tabbedPane.addTab("🖥  服务管理", servicePanel);
         tabbedPane.addTab("📦  版本管理", versionPanel);
+        tabbedPane.addTab("🔌  端口工具", portToolPanel);
+        tabbedPane.addTab("📄  文件关联", fileAssocPanel);
         add(tabbedPane, BorderLayout.CENTER);
 
         // ---- 底部日志面板（默认折叠） ----
