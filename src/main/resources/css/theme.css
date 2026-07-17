@@ -1,0 +1,248 @@
+/* === Service Manager 2.0 — Light Eye-Friendly Theme === */
+
+.root {
+    -fx-font-family: "Microsoft YaHei", "Segoe UI", sans-serif;
+    -fx-font-size: 13px;
+    -bg-main: #f0f2f5;
+    -bg-sidebar: #ffffff;
+    -bg-surface: #ffffff;
+    -bg-card: #ffffff;
+    -bg-hover: #f5f7fa;
+    -border: #e4e7ed;
+    -text-primary: #303133;
+    -text-secondary: #909399;
+    -accent: #409eff;
+    -accent-hover: #66b1ff;
+    -success: #67c23a;
+    -danger: #f56c6c;
+    -warning: #e6a23c;
+}
+
+/* === Sidebar === */
+.sidebar {
+    -fx-background-color: -bg-sidebar;
+    -fx-padding: 24 0 16 0;
+    -fx-min-width: 210;
+    -fx-max-width: 210;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.06), 6, 0, 1, 0);
+}
+
+.sidebar-title {
+    -fx-font-size: 18px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #303133;
+    -fx-padding: 0 0 24 20;
+}
+
+.sidebar-btn {
+    -fx-background-color: transparent;
+    -fx-text-fill: -text-secondary;
+    -fx-font-size: 13px;
+    -fx-padding: 12 20 12 20;
+    -fx-alignment: CENTER_LEFT;
+    -fx-cursor: hand;
+    -fx-max-width: Infinity;
+    -fx-background-radius: 0 6 6 0;
+}
+
+.sidebar-btn:hover {
+    -fx-background-color: #ecf5ff;
+    -fx-text-fill: -accent;
+}
+
+.sidebar-btn:selected {
+    -fx-background-color: #ecf5ff;
+    -fx-text-fill: -accent;
+    -fx-font-weight: bold;
+    -fx-border-color: -accent;
+    -fx-border-width: 0 0 0 3;
+}
+
+/* === Toolbar === */
+.toolbar {
+    -fx-background-color: -bg-surface;
+    -fx-padding: 14 24 14 24;
+    -fx-spacing: 10;
+    -fx-border-color: transparent transparent -border transparent;
+    -fx-border-width: 0 0 1 0;
+}
+
+.toolbar-btn {
+    -fx-font-size: 12px;
+    -fx-font-weight: bold;
+    -fx-padding: 8 18 8 18;
+    -fx-background-radius: 6;
+    -fx-cursor: hand;
+}
+
+.toolbar-btn.primary {
+    -fx-background-color: -accent;
+    -fx-text-fill: white;
+}
+.toolbar-btn.primary:hover { -fx-background-color: -accent-hover; }
+
+.toolbar-btn.danger {
+    -fx-background-color: white;
+    -fx-text-fill: -danger;
+    -fx-border-color: -danger;
+    -fx-border-width: 1;
+    -fx-border-radius: 6;
+}
+.toolbar-btn.danger:hover { -fx-background-color: #fef0f0; }
+
+.toolbar-btn.secondary {
+    -fx-background-color: white;
+    -fx-text-fill: -text-primary;
+    -fx-border-color: -border;
+    -fx-border-width: 1;
+    -fx-border-radius: 6;
+}
+.toolbar-btn.secondary:hover { -fx-background-color: -bg-hover; }
+
+/* === Table === */
+.table-view {
+    -fx-background-color: -bg-card;
+    -fx-table-cell-border-color: transparent;
+    -fx-padding: 0;
+}
+
+.table-view .column-header-background {
+    -fx-background-color: #fafafa;
+    -fx-border-color: transparent transparent -border transparent;
+}
+
+.table-view .column-header {
+    -fx-background-color: transparent;
+    -fx-padding: 12 8 12 8;
+}
+
+.table-view .column-header .label {
+    -fx-text-fill: -text-secondary;
+    -fx-font-weight: bold;
+    -fx-font-size: 11px;
+}
+
+.table-view .table-row-cell {
+    -fx-background-color: white;
+    -fx-text-fill: -text-primary;
+    -fx-border-color: transparent transparent #f2f3f5 transparent;
+    -fx-table-cell-border-color: transparent;
+}
+
+.table-view .table-row-cell:odd {
+    -fx-background-color: #fafbfc;
+}
+
+.table-view .table-row-cell:hover {
+    -fx-background-color: #ecf5ff;
+}
+
+.table-view .table-row-cell:selected {
+    -fx-background-color: #d9ecff;
+}
+
+.table-view .table-cell {
+    -fx-padding: 10 8 10 8;
+    -fx-text-fill: -text-primary;
+}
+
+/* Status badge */
+.status-badge {
+    -fx-font-size: 11px;
+    -fx-font-weight: bold;
+    -fx-padding: 3 9 3 9;
+    -fx-background-radius: 10;
+}
+
+/* Action button */
+.action-btn {
+    -fx-font-size: 11px;
+    -fx-font-weight: bold;
+    -fx-padding: 3 10 3 10;
+    -fx-background-radius: 3;
+    -fx-cursor: hand;
+    -fx-background-color: -accent;
+    -fx-text-fill: white;
+}
+.action-btn:hover { -fx-background-color: -accent-hover; }
+
+.action-btn.danger {
+    -fx-background-color: -danger;
+}
+.action-btn.danger:hover { -fx-background-color: #f78989; }
+
+/* === Status bar === */
+.status-bar {
+    -fx-background-color: -bg-surface;
+    -fx-padding: 8 20 8 20;
+    -fx-border-color: -border transparent transparent transparent;
+}
+.status-label {
+    -fx-text-fill: -text-secondary;
+    -fx-font-size: 11px;
+}
+
+/* === Log area === */
+.log-area {
+    -fx-background-color: #f8f9fa;
+    -fx-text-fill: #606266;
+    -fx-font-family: "Consolas", "Microsoft YaHei", monospace;
+    -fx-font-size: 12px;
+    -fx-padding: 10;
+    -fx-border-color: -border;
+    -fx-border-width: 1 0 0 0;
+}
+.log-area .content { -fx-background-color: #f8f9fa; }
+
+/* Scrollbar */
+.scroll-bar:vertical { -fx-background-color: transparent; -fx-pref-width: 8; }
+.scroll-bar:vertical .thumb {
+    -fx-background-color: #c0c4cc;
+    -fx-background-radius: 4;
+}
+.scroll-bar:vertical .thumb:hover { -fx-background-color: #909399; }
+.scroll-pane { -fx-background-color: transparent; }
+.scroll-pane > .viewport { -fx-background-color: transparent; }
+
+/* Dir button */
+.dir-btn {
+    -fx-background-color: transparent;
+    -fx-text-fill: -accent;
+    -fx-font-size: 15px;
+    -fx-cursor: hand;
+    -fx-padding: 2 8 2 8;
+    -fx-background-radius: 4;
+}
+.dir-btn:hover { -fx-background-color: #ecf5ff; }
+
+/* Text inputs */
+.text-field {
+    -fx-background-color: white;
+    -fx-text-fill: -text-primary;
+    -fx-border-color: -border;
+    -fx-border-radius: 5;
+    -fx-background-radius: 5;
+    -fx-padding: 7 12 7 12;
+}
+.text-field:focused { -fx-border-color: -accent; }
+.text-area {
+    -fx-background-color: white;
+    -fx-text-fill: -text-primary;
+    -fx-border-color: -border;
+    -fx-border-radius: 5;
+    -fx-background-radius: 5;
+}
+.text-area .content { -fx-background-color: white; }
+
+/* Dialog */
+.dialog-pane {
+    -fx-background-color: white;
+    -fx-border-color: -border;
+}
+.dialog-pane .label { -fx-text-fill: -text-primary; }
+.dialog-pane .button {
+    -fx-background-color: -accent;
+    -fx-text-fill: white;
+    -fx-background-radius: 5;
+    -fx-padding: 7 20 7 20;
+}
