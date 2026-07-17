@@ -128,11 +128,11 @@ public class MainFrame extends JFrame {
         table.setAutoResizeMode(JTable.AUTO_RESIZE_ALL_COLUMNS);
         table.getColumnModel().getColumn(0).setMaxWidth(40);
         table.getColumnModel().getColumn(0).setMinWidth(40);
-        table.getColumnModel().getColumn(1).setPreferredWidth(120);
-        table.getColumnModel().getColumn(2).setMaxWidth(90);
+        table.getColumnModel().getColumn(1).setPreferredWidth(110);
+        table.getColumnModel().getColumn(2).setMinWidth(100);
         table.getColumnModel().getColumn(3).setMaxWidth(60);
         table.getColumnModel().getColumn(3).setMinWidth(60);
-        table.getColumnModel().getColumn(4).setMaxWidth(130);
+        table.getColumnModel().getColumn(4).setMinWidth(120);
         table.getColumnModel().getColumn(5).setMaxWidth(80);
         table.getColumnModel().getColumn(5).setMinWidth(80);
 
