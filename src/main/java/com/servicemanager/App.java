@@ -39,10 +39,13 @@ public class App extends Application {
         stage.setScene(scene);
         stage.setTitle("服务管理面板 2.0");
 
-        // 应用图标
-        try (InputStream is = getClass().getResourceAsStream("/icon.png")) {
-            if (is != null) stage.getIcons().add(new Image(is));
-        } catch (Exception e) { /* ignore */ }
+        // 应用图标（Java2D 绘制齿轮图标）
+        List<java.awt.Image> awtIcons = com.servicemanager.ui.AppIcon.createWindowIcons();
+        for (java.awt.Image awtImg : awtIcons) {
+            java.awt.image.BufferedImage buf = (java.awt.image.BufferedImage) awtImg;
+            javafx.scene.image.Image fxImg = javafx.embed.swing.SwingFXUtils.toFXImage(buf, null);
+            stage.getIcons().add(fxImg);
+        }
 
         // 系统托盘（用 Swing 互操作）
         Platform.setImplicitExit(false);
