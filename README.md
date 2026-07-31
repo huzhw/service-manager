@@ -1,5 +1,16 @@
 # Service Manager 2.0
 
+## 相关技能
+
+- [coding-rules](https://github.com/huzhw/coding-rules) — AI 编码协作规范
+- [git-commit](https://github.com/huzhw/git-commit-skill) — Git 提交规范
+- [daily-record](https://github.com/huzhw/daily-record-skill) — 日报需求记录
+- [daily-merge](https://github.com/huzhw/daily-merge-skill) — 日报 Excel 合并
+- [reread-claude-md](https://github.com/huzhw/reread-claude-md-skill) — CLAUDE.md 规则重载
+- [token-3000](https://github.com/huzhw/token-3000-skill) — API Token 一键切换
+
+---
+
 JavaFX 桌面应用，统一管理开发环境中的各类后台服务（数据库、缓存、搜索引擎等）、Node.js/Python 版本工具、端口查杀和文件关联。
 
 ## 环境要求
