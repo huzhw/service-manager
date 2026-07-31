@@ -12,12 +12,19 @@ public class PortChecker {
 
     /**
      * 检测指定端口是否可达（500ms 超时）
+     * <p>
+     * 先试 IPv4 127.0.0.1，失败再试 IPv6 ::1（达梦等数据库可能只监听 IPv6 栈）
      *
      * @param port 端口号
      * @return true 端口可通
      */
     public static boolean isPortOpen(int port) {
-        return isPortOpen("127.0.0.1", port, DEFAULT_TIMEOUT_MS);
+        // 先试 IPv4
+        if (isPortOpen("127.0.0.1", port, DEFAULT_TIMEOUT_MS)) {
+            return true;
+        }
+        // 回退 IPv6（达梦等数据库可能只监听 [::]:port）
+        return isPortOpen("::1", port, DEFAULT_TIMEOUT_MS);
     }
 
     /**

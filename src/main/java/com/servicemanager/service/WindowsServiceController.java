@@ -58,6 +58,8 @@ public class WindowsServiceController implements ServiceController {
 
             // sc start 失败检测
             if (output.contains("FAILED") || output.contains("1056") || output.contains("拒绝访问")) {
+                com.servicemanager.util.LogManager.log(
+                        "sc start " + info.getIdentifier() + " 失败: " + output);
                 return false;
             }
 
@@ -66,6 +68,19 @@ public class WindowsServiceController implements ServiceController {
                 Thread.sleep(500);
                 String status = getStatus(info);
                 if ("RUNNING".equals(status)) {
+                    // 服务进程已启动，等端口监听（达梦等数据库初始化慢）
+                    if (info.getPort() > 0) {
+                        for (int j = 0; j < 20; j++) {
+                            Thread.sleep(500);
+                            if (com.servicemanager.util.PortChecker.isPortOpen(info.getPort())) {
+                                return true;
+                            }
+                        }
+                        // 端口超时仍返回 true，上层 refresh 有宽限期兜底
+                        com.servicemanager.util.LogManager.log(
+                                info.getName() + " 服务已启动但端口 " + info.getPort() + " 尚未监听");
+                        return true;
+                    }
                     return true;
                 }
             }

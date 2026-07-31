@@ -219,7 +219,13 @@ public class MainWindow extends AnchorPane {
                 String status = ctrl.getStatus(svc);
                 if ("RUNNING".equals(status) && svc.getPort() > 0) {
                     if (!com.servicemanager.util.PortChecker.isPortOpen(svc.getPort())) {
-                        status = "PORT_UNREACHABLE";
+                        // 刚启动 60 秒内给宽限期，数据库等需要初始化时间
+                        long elapsed = System.currentTimeMillis() - svc.getStartTime();
+                        if (svc.getStartTime() > 0 && elapsed < 60_000) {
+                            status = "STARTING";
+                        } else {
+                            status = "PORT_UNREACHABLE";
+                        }
                     }
                 }
                 svc.setStatus(status);
