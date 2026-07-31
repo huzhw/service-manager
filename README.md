@@ -80,7 +80,14 @@ src/main/java/com/servicemanager/
 
 全局主题：`src/main/resources/css/theme.css`（浅色护眼风格），所有四个面板统一走这个 CSS 文件。
 
-## 常用端口快捷列表
+## 相关仓库
+
+- [coding-rules](https://github.com/huzhw/coding-rules) — AI 编码协作规范
+- [git-commit](https://github.com/huzhw/git-commit-skill) — Git 提交规范
+- [daily-record](https://github.com/huzhw/daily-record-skill) — 日报需求记录
+- [daily-merge](https://github.com/huzhw/daily-merge-skill) — 日报 Excel 合并
+- [reread-claude-md](https://github.com/huzhw/reread-claude-md-skill) — CLAUDE.md 规则重载
+- [token-3000](https://github.com/huzhw/token-3000-skill) — API Token 一键切换
 
 `3000, 3001, 8051, 8021, 8087, 8095, 8091, 8080, 8000, 8686, 10535`
 
