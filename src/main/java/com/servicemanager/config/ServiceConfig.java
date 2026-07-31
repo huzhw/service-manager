@@ -48,7 +48,7 @@ public class ServiceConfig {
         oracleListener.setGroupName("Oracle");
         list.add(oracleListener);
 
-        ServiceInfo dm = new ServiceInfo("达梦 DM8", ServiceType.WINDOWS_SERVICE, "DmServiceDMSERVER", 5236, "数据库");
+        ServiceInfo dm = new ServiceInfo("达梦 DM8", ServiceType.WINDOWS_SERVICE, "DmServiceDMSERVER", 15236, "数据库");
         dm.setVersion("DM8");
         dm.setWorkingDir("D:\\dmdbms");
         list.add(dm);

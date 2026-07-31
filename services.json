@@ -48,7 +48,7 @@
     "type": "WINDOWS_SERVICE",
     "identifier": "DmServiceDMSERVER",
     "workingDir": "D:\\dmdbms",
-    "port": 5236,
+    "port": 15236,
     "category": "数据库",
     "version": "DM8",
     "startOrder": 0,
