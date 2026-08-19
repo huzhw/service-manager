@@ -21,7 +21,7 @@ public class ServiceConfig {
 
         // ========== Windows 服务 ==========
 
-        ServiceInfo mysql = new ServiceInfo("MySQL", ServiceType.WINDOWS_SERVICE, "MySQL80", 3306, "数据库");
+        ServiceInfo mysql = new ServiceInfo("MySQL", ServiceType.WINDOWS_SERVICE, "MySQL80", 13306, "数据库");
         mysql.setVersion("8.0");
         mysql.setWorkingDir("C:\\Program Files\\MySQL\\MySQL Server 8.0");
         list.add(mysql);
