@@ -62,7 +62,7 @@ public class ServiceConfig {
 
         ServiceInfo es = new ServiceInfo("Elasticsearch", ServiceType.PROCESS,
                 "powershell -ExecutionPolicy Bypass -File \"D:\\tools\\elasticsearch-8.11.3\\start_es.ps1\"",
-                1200, "搜索引擎");
+                19200, "搜索引擎");
         es.setVersion("8.11.3");
         es.setWorkingDir("D:\\tools\\elasticsearch-8.11.3");
         es.setProcessName("java.exe");

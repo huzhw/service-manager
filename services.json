@@ -121,7 +121,7 @@
     "identifier": "powershell -ExecutionPolicy Bypass -File \"D:\\tools\\elasticsearch-8.11.3\\start_es.ps1\"",
     "workingDir": "D:\\tools\\elasticsearch-8.11.3",
     "processName": "java.exe",
-    "port": 1200,
+    "port": 19200,
     "category": "搜索引擎",
     "version": "8.11.3",
     "startOrder": 0,
