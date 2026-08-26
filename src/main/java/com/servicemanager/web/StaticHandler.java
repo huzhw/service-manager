@@ -50,6 +50,13 @@ public class StaticHandler {
             path = "/index.html";
         }
 
+        // 默认首页改用内置极简原生页（零框架，规避老 WebView 事件层失效问题）；
+        // React 构建产物仍保留在 /web 下，删掉此分支即可整体回退
+        if ("/index.html".equals(path)) {
+            respond(ex, 200, SimplePage.HTML.getBytes(StandardCharsets.UTF_8), "text/html; charset=utf-8");
+            return;
+        }
+
         byte[] body = readResource("/web" + path);
         if (body == null && !hasExtension(path)) {
             // SPA 无扩展名路由回退

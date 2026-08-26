@@ -52,7 +52,41 @@
     </dependencies>
 
     <build>
+        <!-- 前端产物不再从 src/main/resources/web 打包，唯一来源是 frontend/dist（见下方拷贝插件），
+             避免"构建完忘了同步"导致 jar 里跑旧页面 -->
+        <resources>
+            <resource>
+                <directory>src/main/resources</directory>
+                <excludes>
+                    <exclude>web/**</exclude>
+                </excludes>
+            </resource>
+        </resources>
         <plugins>
+            <!-- 前端构建产物：process-resources 阶段从 frontend/dist 拷入 classpath 的 /web。
+                 流程约定：先跑 frontend 的 vite build，再 mvn package -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-resources-plugin</artifactId>
+                <version>3.3.1</version>
+                <executions>
+                    <execution>
+                        <id>copy-web-dist</id>
+                        <phase>process-resources</phase>
+                        <goals>
+                            <goal>copy-resources</goal>
+                        </goals>
+                        <configuration>
+                            <outputDirectory>${project.build.outputDirectory}/web</outputDirectory>
+                            <resources>
+                                <resource>
+                                    <directory>${project.basedir}/frontend/dist</directory>
+                                </resource>
+                            </resources>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
