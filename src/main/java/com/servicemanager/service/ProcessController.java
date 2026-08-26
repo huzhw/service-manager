@@ -105,11 +105,29 @@ public class ProcessController implements ServiceController {
             if (pid > 0 && isPidAlive(pid)) {
                 return true;
             }
-            // 父进程已退出（sys_ctl.exe/pg_ctl.exe 等一次性启动器），
-            // 从 processName 反查实际服务进程 PID
-            String procName = info.getProcessName();
-            if (procName != null && !procName.isEmpty()) {
+
+            // 端口反查优先于进程名：Elasticsearch/Nacos 等 java 进程共用 java.exe，
+            // 进程名会匹配到无关进程，端口监听才是该服务启动成功的强证据。
+            if (info.getPort() > 0) {
                 Thread.sleep(3000);
+                for (int i = 0; i < 8; i++) {
+                    Thread.sleep(1500);
+                    if (PortChecker.isPortOpen(info.getPort())) {
+                        long portPid = findPidByPort(info.getPort());
+                        if (portPid > 0) {
+                            info.setPid(portPid);
+                            savePid(info.getName(), portPid);
+                            return true;
+                        }
+                        return true; // 端口已达但反查不到 PID，也按成功处理
+                    }
+                }
+            }
+
+            // 仅当该服务配置了唯一的进程名（如 kingbase.exe / nginx.exe）时，
+            // 才用进程名反查兜底；java.exe 之类共用进程名不可用于归属判定
+            String procName = info.getProcessName();
+            if (procName != null && !procName.isEmpty() && isUniqueProcessName(procName)) {
                 long childPid = findPidByName(procName);
                 if (childPid > 0) {
                     info.setPid(childPid);
@@ -117,18 +135,7 @@ public class ProcessController implements ServiceController {
                     return true;
                 }
             }
-            // 最后兜底：等端口监听
-            if (info.getPort() > 0) {
-                Thread.sleep(15000);
-                if (PortChecker.isPortOpen(info.getPort())) {
-                    long portPid = findPidByPort(info.getPort());
-                    if (portPid > 0) {
-                        info.setPid(portPid);
-                        savePid(info.getName(), portPid);
-                    }
-                    return true;
-                }
-            }
+
             return false;
 
         } catch (Exception e) {
@@ -138,36 +145,92 @@ public class ProcessController implements ServiceController {
 
     @Override
     public boolean stop(ServiceInfo info) {
-        long pid = info.getPid();
-        if (pid <= 0) {
-            pid = loadPid(info.getName());
+        // PID 解析：端口反查最鲜活 > 内存 PID（需存活校验）> PID 文件（可能陈旧）
+        long target = 0;
+        if (info.getPort() > 0) {
+            target = findPidByPort(info.getPort());
         }
-        if (pid <= 0) {
+        if (target <= 0 && info.getPid() > 0 && isPidAlive(info.getPid())) {
+            target = info.getPid();
+        }
+        if (target <= 0) {
+            long saved = loadPid(info.getName());
+            if (saved > 0 && isPidAlive(saved)) {
+                target = saved;
+            }
+        }
+        if (target <= 0) {
+            com.servicemanager.util.LogManager.log(
+                    "✗ " + info.getName() + " 停止失败：无监听端口且记录的 PID 已失效");
             return false;
         }
 
         try {
-            // 优先用 PID 杀指定进程
-            ProcessBuilder pb = new ProcessBuilder("taskkill", "/PID", String.valueOf(pid), "/F");
+            // /T 杀进程树：npm/cmd 启动器的子进程一并终止
+            ProcessBuilder pb = new ProcessBuilder("taskkill", "/PID", String.valueOf(target), "/T", "/F");
             pb.redirectErrorStream(true);
             Process p = pb.start();
-            p.waitFor();
-            if (p.exitValue() != 0) {
-                return false;
+            StringBuilder sb = new StringBuilder();
+            try (BufferedReader reader = new BufferedReader(
+                    new InputStreamReader(p.getInputStream(), "GBK"))) {
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    sb.append(line).append(' ');
+                }
             }
-            // 验证进程已停止（最多等 5 秒）
-            for (int i = 0; i < 10; i++) {
+            p.waitFor();
+            com.servicemanager.util.LogManager.log(
+                    "taskkill /PID " + target + " /T /F → exit=" + p.exitValue()
+                            + " | " + sb.toString().trim());
+
+            // 成功判定按服务实际形态走三维度，任一维度先清零即判成功：
+            //  ① 配了进程名的服务，进程消失即成功（如 kingbase.exe）——
+            //     但共用进程名（java.exe、nginx.exe 多实例）不可用，靠端口
+            //  ② 有端口以端口释放为准（最多 10 秒）
+            //  ③ 无端口无进程名，以记录 PID 消失为准（最多 5 秒）
+            boolean byName = info.getProcessName() != null
+                    && !info.getProcessName().isEmpty()
+                    && !info.getProcessName().contains("java");
+            for (int i = 0; i < 20; i++) {
                 Thread.sleep(500);
-                if (!isPidAlive(pid)) {
+                if (byName && findPidByName(info.getProcessName()) <= 0) {
                     info.setPid(0);
                     deletePid(info.getName());
                     return true;
                 }
+                if (info.getPort() > 0 && !PortChecker.isPortOpen(info.getPort())) {
+                    info.setPid(0);
+                    deletePid(info.getName());
+                    if (byName) {
+                        // 进程名 + 端口同时释放才确认成功，避免同机器共享进程名的
+                        // 另一实例仍占用端口时误判（课堂评分场景）
+                        com.servicemanager.util.LogManager.log(
+                                "  ✓ " + info.getName() + ": 端口 " + info.getPort() + " 已释放");
+                    }
+                    return true;
+                }
             }
-            return false; // 超时未停止
+            // 轮询超时未清零，最后再查一次进程是否已消失（含共用进程名场景）
+            if (!isPidAlive(target)) {
+                info.setPid(0);
+                deletePid(info.getName());
+                return true;
+            }
+            com.servicemanager.util.LogManager.log(
+                    "✗ " + info.getName() + " 停止超时：端口/进程 " + target + " 仍在");
+            return false;
         } catch (Exception e) {
+            com.servicemanager.util.LogManager.log("✗ " + info.getName() + " 停止异常: " + e.getMessage());
             return false;
         }
+    }
+
+    /**
+     * 进程名是否可以被该服务独占判定（java.exe 等共用名不可信）
+     */
+    private boolean isUniqueProcessName(String procName) {
+        String lower = procName.toLowerCase();
+        return !lower.contains("java") && !lower.contains("cmd") && !lower.contains("powershell");
     }
 
     /**

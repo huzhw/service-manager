@@ -122,32 +122,43 @@ public class ServiceOrchestrator {
             return false;
         }
         Thread t = new Thread(() -> {
-            LogManager.log("→ 批量启动...");
-            List<ServiceInfo> sorted = new ArrayList<>(services);
-            sorted.sort(Comparator.comparingInt(ServiceInfo::getStartOrder));
-            int ok = 0;
-            int fail = 0;
-            for (ServiceInfo svc : sorted) {
-                if ("RUNNING".equals(svc.getStatus())) {
-                    continue;
+            try {
+                LogManager.log("→ 批量启动...");
+                List<ServiceInfo> sorted = new ArrayList<>(services);
+                sorted.sort(Comparator.comparingInt(ServiceInfo::getStartOrder));
+                int ok = 0;
+                int fail = 0;
+                for (ServiceInfo svc : sorted) {
+                    if ("RUNNING".equals(svc.getStatus())) {
+                        continue;
+                    }
+                    LogManager.log("→ 启动 " + svc.getName() + " ...");
+                    try {
+                        boolean result = controllerOf(svc).start(svc);
+                        if (result) {
+                            svc.setStatus("RUNNING");
+                            svc.setStartTime(System.currentTimeMillis());
+                            LogManager.log("  ✓ " + svc.getName() + " 启动成功");
+                            ok++;
+                        } else {
+                            svc.setStatus("STOPPED");
+                            LogManager.log("  ✗ " + svc.getName() + " 失败");
+                            fail++;
+                        }
+                    } catch (Exception e) {
+                        // 单服务异常不打断批量：记录并继续下一个，finally 仍会释放互斥
+                        svc.setStatus("STOPPED");
+                        LogManager.log("  ✗ " + svc.getName() + " 启动异常: " + e.getMessage());
+                        fail++;
+                    }
+                    sleepQuietly(1500);
                 }
-                LogManager.log("→ 启动 " + svc.getName() + " ...");
-                boolean result = controllerOf(svc).start(svc);
-                if (result) {
-                    svc.setStatus("RUNNING");
-                    svc.setStartTime(System.currentTimeMillis());
-                    LogManager.log("  ✓ " + svc.getName() + " 启动成功");
-                    ok++;
-                } else {
-                    svc.setStatus("STOPPED");
-                    LogManager.log("  ✗ " + svc.getName() + " 失败");
-                    fail++;
-                }
-                sleepQuietly(1500);
+                LogManager.log("批量完成: 成功 " + ok + ", 失败 " + fail);
+                refreshAllStatus();
+            } finally {
+                // 无论是否异常都必须释放互斥标记，否则后续所有启停被静默拒绝
+                endJob();
             }
-            LogManager.log("批量完成: 成功 " + ok + ", 失败 " + fail);
-            refreshAllStatus();
-            endJob();
         }, "svc-start-all");
         t.setDaemon(true);
         t.start();
@@ -162,32 +173,42 @@ public class ServiceOrchestrator {
             return false;
         }
         Thread t = new Thread(() -> {
-            LogManager.log("← 批量停止...");
-            List<ServiceInfo> sorted = new ArrayList<>(services);
-            sorted.sort(Comparator.comparingInt(ServiceInfo::getStopOrder).reversed());
-            int ok = 0;
-            int fail = 0;
-            for (ServiceInfo svc : sorted) {
-                if ("STOPPED".equals(svc.getStatus())) {
-                    continue;
+            try {
+                LogManager.log("← 批量停止...");
+                List<ServiceInfo> sorted = new ArrayList<>(services);
+                sorted.sort(Comparator.comparingInt(ServiceInfo::getStopOrder).reversed());
+                int ok = 0;
+                int fail = 0;
+                for (ServiceInfo svc : sorted) {
+                    if ("STOPPED".equals(svc.getStatus())) {
+                        continue;
+                    }
+                    LogManager.log("← 停止 " + svc.getName() + " ...");
+                    try {
+                        boolean result = controllerOf(svc).stop(svc);
+                        if (result) {
+                            svc.setStatus("STOPPED");
+                            svc.setPid(0);
+                            svc.setStartTime(0);
+                            LogManager.log("  ✓ " + svc.getName() + " 已停止");
+                            ok++;
+                        } else {
+                            LogManager.log("  ✗ " + svc.getName() + " 失败");
+                            fail++;
+                        }
+                    } catch (Exception e) {
+                        // 单服务异常不打断批量：记录并继续下一个，finally 仍会释放互斥
+                        svc.setStatus("STOPPED");
+                        LogManager.log("  ✗ " + svc.getName() + " 停止异常: " + e.getMessage());
+                        fail++;
+                    }
+                    sleepQuietly(1000);
                 }
-                LogManager.log("← 停止 " + svc.getName() + " ...");
-                boolean result = controllerOf(svc).stop(svc);
-                if (result) {
-                    svc.setStatus("STOPPED");
-                    svc.setPid(0);
-                    svc.setStartTime(0);
-                    LogManager.log("  ✓ " + svc.getName() + " 已停止");
-                    ok++;
-                } else {
-                    LogManager.log("  ✗ " + svc.getName() + " 失败");
-                    fail++;
-                }
-                sleepQuietly(1000);
+                LogManager.log("批量完成: 成功 " + ok + ", 失败 " + fail);
+                refreshAllStatus();
+            } finally {
+                endJob();
             }
-            LogManager.log("批量完成: 成功 " + ok + ", 失败 " + fail);
-            refreshAllStatus();
-            endJob();
         }, "svc-stop-all");
         t.setDaemon(true);
         t.start();
@@ -206,40 +227,43 @@ public class ServiceOrchestrator {
             return false;
         }
         Thread t = new Thread(() -> {
-            group.sort(stopping
-                    ? Comparator.comparingInt(ServiceInfo::getStopOrder)
-                    : Comparator.comparingInt(ServiceInfo::getStartOrder));
-            for (ServiceInfo member : group) {
-                ServiceController ctrl = controllerOf(member);
-                if (stopping) {
-                    if ("STOPPED".equals(member.getStatus())) {
-                        continue;
+            try {
+                group.sort(stopping
+                        ? Comparator.comparingInt(ServiceInfo::getStopOrder)
+                        : Comparator.comparingInt(ServiceInfo::getStartOrder));
+                for (ServiceInfo member : group) {
+                    ServiceController ctrl = controllerOf(member);
+                    if (stopping) {
+                        if ("STOPPED".equals(member.getStatus())) {
+                            continue;
+                        }
+                        member.setStatus("STOPPING");
+                        LogManager.log("← 停止 " + member.getName() + " ...");
+                        boolean ok = ctrl.stop(member);
+                        if (ok) {
+                            member.setStartTime(0);
+                        }
+                        LogManager.log(ok ? "  ✓ " + member.getName() + " 已停止"
+                                : "  ✗ " + member.getName() + " 失败");
+                    } else {
+                        if ("RUNNING".equals(member.getStatus())) {
+                            continue;
+                        }
+                        member.setStatus("STARTING");
+                        LogManager.log("→ 启动 " + member.getName() + " ...");
+                        boolean ok = ctrl.start(member);
+                        if (ok) {
+                            member.setStartTime(System.currentTimeMillis());
+                        }
+                        LogManager.log(ok ? "  ✓ " + member.getName() + " 启动成功"
+                                : "  ✗ " + member.getName() + " 失败");
                     }
-                    member.setStatus("STOPPING");
-                    LogManager.log("← 停止 " + member.getName() + " ...");
-                    boolean ok = ctrl.stop(member);
-                    if (ok) {
-                        member.setStartTime(0);
-                    }
-                    LogManager.log(ok ? "  ✓ " + member.getName() + " 已停止"
-                            : "  ✗ " + member.getName() + " 失败");
-                } else {
-                    if ("RUNNING".equals(member.getStatus())) {
-                        continue;
-                    }
-                    member.setStatus("STARTING");
-                    LogManager.log("→ 启动 " + member.getName() + " ...");
-                    boolean ok = ctrl.start(member);
-                    if (ok) {
-                        member.setStartTime(System.currentTimeMillis());
-                    }
-                    LogManager.log(ok ? "  ✓ " + member.getName() + " 启动成功"
-                            : "  ✗ " + member.getName() + " 失败");
+                    sleepQuietly(800);
                 }
-                sleepQuietly(800);
+                refreshAllStatus();
+            } finally {
+                endJob();
             }
-            refreshAllStatus();
-            endJob();
         }, "svc-group-action");
         t.setDaemon(true);
         t.start();
