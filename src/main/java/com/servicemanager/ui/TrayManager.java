@@ -88,6 +88,8 @@ public class TrayManager {
 
     public void exit() {
         running = false;
+        // 保存窗口位置尺寸（System.exit 不走 JavaFX stop 流程，需显式保存）
+        com.servicemanager.App.saveWindowState();
         if (trayIcon != null) {
             SystemTray.getSystemTray().remove(trayIcon);
         }
