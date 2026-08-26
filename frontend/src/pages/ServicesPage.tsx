@@ -9,7 +9,7 @@ import {
     PlayCircleOutlined,
     ReloadOutlined,
 } from '@ant-design/icons';
-import { App as AntdApp, Button, Popconfirm, Space, Table, Tag, Tooltip } from 'antd';
+import { App as AntdApp, Button, Space, Table, Tag } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { api } from '../api/client';
 import type { ServiceRow, ServicesResp, SvcStatus } from '../api/types';
@@ -45,11 +45,9 @@ const PageHeader: React.FC<{
             <Button type="primary" icon={<PlayCircleOutlined />} onClick={onStartAll}>
                 全部启动
             </Button>
-            <Popconfirm title="确定停止全部服务？" onConfirm={onStopAll}>
-                <Button danger ghost icon={<PauseCircleOutlined />}>
-                    全部停止
-                </Button>
-            </Popconfirm>
+            <Button danger ghost icon={<PauseCircleOutlined />} onClick={onStopAll}>
+                全部停止
+            </Button>
         </Space>
     </div>
 );
@@ -72,11 +70,53 @@ const StatCard: React.FC<{ label: string; value: number; dot: string }> = ({ lab
     </div>
 );
 
+/** 行内启停按钮组：loading 态自持在单元格内，点击不会触发整表重渲染 */
+const ActionButtons: React.FC<{
+    row: ServiceRow;
+    onAction: (action: 'start' | 'stop', name: string) => Promise<void>;
+    onOpenDir: (row: ServiceRow) => void;
+}> = React.memo(({ row, onAction, onOpenDir }) => {
+    const [pending, setPending] = useState(false);
+    const running = row.status === 'RUNNING';
+    return (
+        <Space size={4}>
+            {/* OliveTin 形态：点击立即执行，零弹层依赖（老 WebKit 对 portal 弹层兼容差）；
+                提示用原生 title 属性，不用 antd Tooltip */}
+            <Button
+                size="small"
+                type={running ? 'default' : 'primary'}
+                danger={running}
+                ghost={running}
+                icon={running ? <PauseCircleOutlined /> : <PlayCircleOutlined />}
+                loading={pending}
+                title={(running ? '停止（同组联动）：' : '启动（同组联动）：') + row.name}
+                onClick={async () => {
+                    setPending(true);
+                    try {
+                        await onAction(running ? 'stop' : 'start', row.name);
+                    } finally {
+                        setPending(false);
+                    }
+                }}
+            >
+                {running ? '停止' : '启动'}
+            </Button>
+            <Button
+                size="small"
+                type="text"
+                icon={<FolderOpenOutlined />}
+                disabled={!row.workingDir}
+                title="打开目录"
+                onClick={() => onOpenDir(row)}
+            />
+        </Space>
+    );
+});
+
 const ServicesPage: React.FC = () => {
-    const { message, modal } = AntdApp.useApp();
+    const { message } = AntdApp.useApp();
     const [data, setData] = useState<ServicesResp | null>(null);
     const [refreshing, setRefreshing] = useState(false);
-    const [acting, setActing] = useState<string | null>(null);
 
     /** 拉取列表：内容没变化就跳过 setState，避免老 WebKit 每 5 秒无谓全表重绘卡顿 */
     const lastSnapRef = useRef<string>('');
@@ -109,31 +149,40 @@ const ServicesPage: React.FC = () => {
         setRefreshing(false);
     }, [load]);
 
-    /** 提交启停动作 */
+    /** 提交启停动作：提交后立刻刷新 + 短轮询直到目标脱离 STARTING/STOPPING 过渡态 */
     const doAction = useCallback(async (action: 'start' | 'stop' | 'start-all' | 'stop-all', name?: string) => {
-        const key = name || action;
-        setActing(key);
         try {
             await api.serviceAction(action, name);
             message.success(`「${name || '批量'}」任务已提交，等待状态刷新`);
-            setTimeout(() => load(), 1200);
+            await load();
+
+            // 目标服务（或批量，则取任意仍处于过渡态的服务）不再处于 STARTING/STOPPING 即停
+            const POLL_MS = 800;
+            const MAX_POLLS = 10;
+            for (let i = 0; i < MAX_POLLS; i++) {
+                const resp = await api.services();
+                if (name) {
+                    const row = resp.services.find((r) => r.name === name);
+                    if (!row || row.status !== 'STARTING' && row.status !== 'STOPPING') {
+                        await load();
+                        break;
+                    }
+                } else {
+                    const busy = resp.services.some(
+                        (r) => r.status === 'STARTING' || r.status === 'STOPPING'
+                    );
+                    if (!busy) {
+                        await load();
+                        break;
+                    }
+                }
+                // 等 800ms 后继续轮询
+                await new Promise((resolve) => setTimeout(resolve, POLL_MS));
+            }
         } catch (e) {
             message.error((e as Error).message);
-        } finally {
-            setActing(null);
         }
     }, [load, message]);
-
-    /** 全部停止前二次确认 */
-    const confirmStopAll = useCallback(() => {
-        modal.confirm({
-            title: '停止全部服务',
-            content: '将按停止顺序依次停止所有运行中的服务，确定继续？',
-            okText: '停止',
-            okButtonProps: { danger: true },
-            onOk: () => doAction('stop-all'),
-        });
-    }, [doAction, modal]);
 
     /** 打开工作目录 */
     const openDir = useCallback(async (row: ServiceRow) => {
@@ -200,39 +249,9 @@ const ServicesPage: React.FC = () => {
             title: '操作',
             key: 'actions',
             width: 150,
-            render: (_, row) => {
-                const running = row.status === 'RUNNING';
-                return (
-                    <Space size={4}>
-                        <Tooltip title={running ? '停止（同组联动）' : '启动（同组联动）'}>
-                            <Popconfirm
-                                title={(running ? '停止 ' : '启动 ') + row.name + '？'}
-                                onConfirm={() => doAction(running ? 'stop' : 'start', row.name)}
-                            >
-                                <Button
-                                    size="small"
-                                    type={running ? 'default' : 'primary'}
-                                    danger={running}
-                                    ghost={running}
-                                    icon={running ? <PauseCircleOutlined /> : <PlayCircleOutlined />}
-                                    loading={acting === row.name}
-                                >
-                                    {running ? '停止' : '启动'}
-                                </Button>
-                            </Popconfirm>
-                        </Tooltip>
-                        <Tooltip title="打开目录">
-                            <Button
-                                size="small"
-                                type="text"
-                                icon={<FolderOpenOutlined />}
-                                disabled={!row.workingDir}
-                                onClick={() => openDir(row)}
-                            />
-                        </Tooltip>
-                    </Space>
-                );
-            },
+            render: (_, row) => (
+                <ActionButtons row={row} onAction={doAction} onOpenDir={openDir} />
+            ),
         },
     ];
 
@@ -244,7 +263,7 @@ const ServicesPage: React.FC = () => {
                 refreshing={refreshing}
                 onRefresh={refresh}
                 onStartAll={() => doAction('start-all')}
-                onStopAll={confirmStopAll}
+                onStopAll={() => doAction('stop-all')}
             />
 
             {/* 统计卡片行 */}

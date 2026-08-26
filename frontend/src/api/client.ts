@@ -49,6 +49,10 @@ async function request<T extends ApiBase>(path: string, init?: RequestInit): Pro
         throw new Error('无法连接后端服务，请确认程序正在运行');
     }
     const data = (await resp.json()) as T;
+    // 会话失效（应用重启后 token 已换新，旧页面还在点）必须给明确文案，不能无声
+    if (resp.status === 401) {
+        throw new Error('面板会话已失效，请从托盘重新打开面板');
+    }
     if (!resp.ok || data.ok === false) {
         throw new Error(data.error || `请求失败 (${resp.status})`);
     }
