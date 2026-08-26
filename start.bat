@@ -8,7 +8,7 @@ if %errorlevel% neq 0 goto ELEVATE
 goto BODY
 
 :ELEVATE
-powershell -NoProfile -Command "Start-Process -FilePath '%~f0' -Verb RunAs"
+powershell -NoProfile -Command "Start-Process -FilePath '%~f0' -Verb RunAs -WindowStyle Hidden"
 exit /b
 
 :BODY
@@ -50,7 +50,7 @@ ping -n 5 127.0.0.1 >nul
 tasklist /FI "IMAGENAME eq javaw.exe" 2>nul | find /I "javaw.exe" >nul
 if errorlevel 1 goto ERR_DEAD
 echo [%date% %time%] process alive, launch OK >> "%LOGFILE%"
-if exist "tools\dark-titlebar.ps1" powershell -NoProfile -ExecutionPolicy Bypass -File "tools\dark-titlebar.ps1"
+if exist "tools\dark-titlebar.ps1" powershell -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File "tools\dark-titlebar.ps1"
 exit /b 0
 
 :ERR_DEAD

@@ -1,15 +1,51 @@
 package com.servicemanager.ui;
 
+import javax.imageio.ImageIO;
 import java.awt.*;
 import java.awt.geom.*;
 import java.awt.image.BufferedImage;
+import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
 /**
- * 应用图标 — Java2D 绘制齿轮+盾牌风格的服务管理图标
+ * 应用图标 — 优先加载 tools/app-icon.png（新设计：深色底+渐变齿轮+运行灯），
+ * 文件缺失时回退内置 Java2D 绘制（齿轮+盾牌风格）
  */
 public class AppIcon {
+
+    /** 外部图标候选路径（相对工作目录，start.bat 已 cd 到项目根） */
+    private static final String[] PNG_CANDIDATES = {
+            "tools/app-icon.png",
+            "app-icon.png",
+    };
+
+    private static Image externalCache;
+
+    /**
+     * 加载外部图标文件；未命中返回 null
+     */
+    private static synchronized Image loadExternal() {
+        if (externalCache != null) {
+            return externalCache;
+        }
+        for (String path : PNG_CANDIDATES) {
+            File f = new File(path);
+            if (f.isFile()) {
+                try {
+                    BufferedImage img = ImageIO.read(f);
+                    if (img != null) {
+                        externalCache = img;
+                        break;
+                    }
+                } catch (IOException ignored) {
+                    // 换下一个候选路径 / 回退内置绘制
+                }
+            }
+        }
+        return externalCache;
+    }
 
     private static final Color BG_START  = new Color(0x42, 0xA5, 0xF5);  // Material Blue 400
     private static final Color BG_END    = new Color(0x1E, 0x88, 0xE5);  // Material Blue 600
@@ -18,16 +54,41 @@ public class AppIcon {
     private static final Color SHADOW    = new Color(0, 0, 0, 30);
 
     public static Image createTrayIcon() {
+        Image ext = loadExternal();
+        if (ext instanceof BufferedImage) {
+            return scaled((BufferedImage) ext, 16);
+        }
         return createIcon(16);
     }
 
     public static List<Image> createWindowIcons() {
         List<Image> list = new ArrayList<>();
+        Image ext = loadExternal();
+        if (ext instanceof BufferedImage) {
+            for (int size : new int[]{16, 32, 48, 64, 256}) {
+                // 必须返回 BufferedImage：App.start 会对每项强转 (BufferedImage)
+                list.add(scaled((BufferedImage) ext, size));
+            }
+            return list;
+        }
         list.add(createIcon(16));
         list.add(createIcon(32));
         list.add(createIcon(64));
         list.add(createIcon(128));
         return list;
+    }
+
+    /**
+     * 等比缩放到指定尺寸并返回 BufferedImage（不能返回 ToolkitImage，
+     * 否则调用方强转 BufferedImage 会 ClassCastException 崩机）
+     */
+    private static BufferedImage scaled(BufferedImage src, int size) {
+        BufferedImage out = new BufferedImage(size, size, BufferedImage.TYPE_INT_ARGB);
+        Graphics2D g = out.createGraphics();
+        g.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
+        g.drawImage(src, 0, 0, size, size, null);
+        g.dispose();
+        return out;
     }
 
     private static Image createIcon(int size) {
