@@ -17,3 +17,7 @@ Thumbs.db
 derby.log
 .code-check.db
 work
+
+# Frontend toolchain
+frontend/node_modules/
+frontend/dist/

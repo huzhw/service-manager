@@ -1,0 +1,191 @@
+/* === Service Manager Web — 深色科技风全局样式 === */
+
+:root {
+    /* 色板 */
+    --bg-0: #0a0e17;
+    --bg-1: #101627;
+    --accent: #4f8cff;
+    --accent-2: #22d3ee;
+    --ok: #34d399;
+    --warn: #f59e0b;
+    --danger: #f43f5e;
+    --muted: #8b96ab;
+    --line: rgba(148, 163, 184, 0.14);
+    --glass: rgba(148, 163, 184, 0.06);
+
+    /* 字体：等宽字体第一位必须是系统自带，老 WebKit 对缺失首字体回退失效会导致数字乱码 */
+    --font-mono: Consolas, 'Courier New', monospace;
+}
+
+/* === 服务表格紧凑行距：整表直出不滚动 === */
+.ant-table-wrapper .ant-table-small .ant-table-tbody > tr > td {
+    padding: 4px 8px !important;
+}
+
+.ant-table-wrapper .ant-table-small .ant-table-thead > tr > th {
+    padding: 5px 8px !important;
+}
+
+html,
+body,
+#root {
+    margin: 0;
+    height: 100%;
+}
+
+body {
+    background:
+        radial-gradient(1200px 600px at 85% -10%, rgba(79, 140, 255, 0.12), transparent 60%),
+        radial-gradient(900px 500px at -10% 110%, rgba(34, 211, 238, 0.08), transparent 55%),
+        linear-gradient(160deg, var(--bg-0) 0%, var(--bg-1) 100%);
+    /* 不用 background-attachment: fixed —— 老 WebKit 下会强制全屏重绘导致卡顿 */
+    color: #c9d4e3;
+    font-family: 'Microsoft YaHei', 'Segoe UI', sans-serif;
+    overflow: hidden;
+}
+
+/* === 玻璃拟态卡片（不支持 backdrop-filter 时自动退化为实色半透明）=== */
+.glass-card {
+    background: var(--glass);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    box-shadow: 0 8px 32px rgba(2, 6, 17, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+@supports (backdrop-filter: blur(18px)) {
+    .glass-card {
+        background: rgba(148, 163, 184, 0.05);
+        backdrop-filter: blur(18px) saturate(140%);
+        -webkit-backdrop-filter: blur(18px) saturate(140%);
+    }
+}
+
+/* hover 浮起 */
+.glass-card.hoverable {
+    transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+}
+
+.glass-card.hoverable:hover {
+    transform: translateY(-2px);
+    border-color: rgba(79, 140, 255, 0.35);
+    box-shadow: 0 12px 40px rgba(2, 6, 17, 0.6), 0 0 0 1px rgba(79, 140, 255, 0.15);
+}
+
+/* === 状态光点（呼吸动画）=== */
+.glow-dot {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.glow-dot.ok {
+    background: var(--ok);
+    box-shadow: 0 0 6px var(--ok), 0 0 12px rgba(52, 211, 153, 0.5);
+    animation: breathe-ok 2.4s ease-in-out infinite;
+}
+
+.glow-dot.off {
+    background: #64748b;
+    box-shadow: none;
+}
+
+.glow-dot.warn {
+    background: var(--warn);
+    box-shadow: 0 0 6px var(--warn);
+    animation: breathe-warn 1.6s ease-in-out infinite;
+}
+
+.glow-dot.bad {
+    background: var(--danger);
+    box-shadow: 0 0 6px var(--danger), 0 0 12px rgba(244, 63, 94, 0.5);
+    animation: breathe-bad 1.2s ease-in-out infinite;
+}
+
+@keyframes breathe-ok {
+
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.45;
+    }
+}
+
+@keyframes breathe-warn {
+
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.4;
+    }
+}
+
+@keyframes breathe-bad {
+
+    0%,
+    100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+
+    50% {
+        opacity: 0.5;
+        transform: scale(0.82);
+    }
+}
+
+/* === 品牌渐变字 === */
+.brand-text {
+    background: linear-gradient(90deg, var(--accent) 0%, var(--accent-2) 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+}
+
+/* === 等宽文本 === */
+.mono {
+    font-family: var(--font-mono);
+}
+
+/* === 页面切换淡入 === */
+.page-fade {
+    animation: pageIn 0.28s ease both;
+}
+
+@keyframes pageIn {
+    from {
+        opacity: 0;
+        transform: translateY(6px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* === 细滚动条 === */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-thumb {
+    background: rgba(148, 163, 184, 0.25);
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: rgba(148, 163, 184, 0.45);
+}
+
+::-webkit-scrollbar-track {
+    background: transparent;
+}
