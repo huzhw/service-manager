@@ -9,17 +9,17 @@ import javafx.geometry.Pos;
 import javafx.scene.control.Label;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.VBox;
-import javafx.scene.web.WebView;
 import javafx.stage.Stage;
 
 import java.io.IOException;
 import java.util.List;
 
 /**
- * 主窗口 — WebView 壳
+ * 主窗口 — 浏览器承载壳
  * <p>
- * 旧 JavaFX 面板整体退役：窗口内嵌 WebView 加载 React 前端，
- * 前后端通过 127.0.0.1 内嵌 HTTP 服务通信。托盘能力保留。
+ * 内嵌 WebView 已退役（老 WebView 渲染正常但鼠标事件无法进入页面）：
+ * 本类只负责启动内嵌 HTTP 服务，并用系统默认浏览器打开面板页面。
+ * 再次双击桌面快捷方式时由 App 的单实例唤醒通道回调 {@link #showInBrowser()} 重新弹出浏览器。
  */
 public class MainWindow extends BorderPane {
 
@@ -32,68 +32,39 @@ public class MainWindow extends BorderPane {
         // 业务编排：装载服务、立即刷新、启动 30s 定时刷新
         ServiceOrchestrator.get().init(services);
 
-        // 启动内嵌 HTTP 服务并让 WebView 加载前端
+        // 启动内嵌 HTTP 服务并用系统浏览器打开面板
         try {
             server.start();
             LogManager.log("Web 服务已启动，访问地址: " + server.url());
-            WebView webView = new WebView();
-            // 渲染自检：加载成功后安装全局错误捕获，随后分两次采样
-            // （字符集 / 脚本清单 / 资源加载量 / root 挂载情况 / 运行时错误）
-            webView.getEngine().getLoadWorker().stateProperty().addListener((obs, oldS, newS) -> {
-                if (newS == javafx.concurrent.Worker.State.SUCCEEDED) {
-                    try {
-                        webView.getEngine().executeScript(
-                                "window.__errs=[];window.onerror=function(m,s,l,c){"
-                                        + "window.__errs.push(m+' @'+(s||'').split('/').pop()+':'+l);};");
-                        Object info1 = webView.getEngine().executeScript(
-                                "document.characterSet + ' | scripts=' + document.scripts.length"
-                                        + " + ' | res=' + (function(){try{return performance.getEntriesByType("
-                                        + "'resource').map(function(r){return r.name.split('/').pop()+':'+r.transferSize}).join(',')}"
-                                        + "catch(e){return 'n/a'}})()");
-                        LogManager.log("WebView 自检①: " + info1);
-                        // 3 秒后二次采样：给异步挂载留时间
-                        new Thread(() -> {
-                            try {
-                                Thread.sleep(3000);
-                            } catch (InterruptedException ignored) {
-                            }
-                            javafx.application.Platform.runLater(() -> {
-                                try {
-                                    Object info2 = webView.getEngine().executeScript(
-                                            "'root=' + (function(){var r=document.getElementById('root');"
-                                                    + "return r ? r.childElementCount : 'none'})()"
-                                                    + " + ' | brand=' + encodeURIComponent((function(){"
-                                                    + "var b=document.querySelector('.brand-text');"
-                                                    + "return b ? b.textContent : 'none'})()).substring(0,30)"
-                                                    + " + ' | errs=' + window.__errs.join(' ;; ')");
-                                    LogManager.log("WebView 自检②: " + info2);
-                                    // 自检③：canvas 字形像素比对——判断中文字体是否真的渲染出来
-                                    Object info3 = webView.getEngine().executeScript(
-                                            "(function(){function bmp(ch){var c=document.createElement('canvas');"
-                                                    + "c.width=80;c.height=80;var x=c.getContext('2d');"
-                                                    + "x.font='60px Microsoft YaHei';x.fillStyle='#fff';"
-                                                    + "x.fillRect(0,0,80,80);x.fillStyle='#000';x.fillText(ch,10,65);"
-                                                    + "return x.getImageData(0,0,80,80).data;}"
-                                                    + "var d1=bmp('\\u670D'),d2=bmp('\\u7BA1'),diff=0,dark1=0;"
-                                                    + "for(var i=0;i<d1.length;i+=4){if(d1[i]<120){dark1++;"
-                                                    + "if(Math.abs(d1[i]-d2[i])>30)diff++;}}"
-                                                    + "return 'dark=' + dark1 + ' diff=' + diff;})()");
-                                    LogManager.log("WebView 自检③(字形像素): " + info3);
-                                } catch (Exception e) {
-                                    LogManager.log("WebView 自检②失败: " + e.getMessage());
-                                }
-                            });
-                        }, "webview-probe").start();
-                    } catch (Exception e) {
-                        LogManager.log("WebView 自检①失败: " + e.getMessage());
-                    }
-                }
-            });
-            webView.getEngine().load(server.url());
-            setCenter(webView);
+            showInBrowser();
+            setCenter(infoBox());
         } catch (IOException e) {
             LogManager.log("✗ 内嵌 Web 服务启动失败: " + e.getMessage());
             setCenter(errorBox("内嵌 Web 服务启动失败", e.getMessage()));
+        }
+    }
+
+    /**
+     * 用系统默认浏览器打开面板（带 token 完整地址）
+     * <p>
+     * 调起链二级回退：Desktop.browse（标准 API，正确处理带查询串的 URL）
+     * → cmd start 兜底 → 日志留址手动访问。
+     */
+    public void showInBrowser() {
+        String url = server.url();
+        try {
+            java.awt.Desktop.getDesktop().browse(new java.net.URI(url));
+            LogManager.log("已在浏览器打开面板: " + url);
+            return;
+        } catch (Exception e) {
+            LogManager.log("Desktop.browse 打开失败，回退 cmd start: " + e.getMessage());
+        }
+        try {
+            // start 后的空串是窗口标题占位，防止 URL 被当成标题吞掉
+            new ProcessBuilder("cmd", "/c", "start", "", url).start();
+            LogManager.log("已在浏览器打开面板: " + url);
+        } catch (Exception e) {
+            LogManager.log("✗ 浏览器打开失败，请手动访问: " + url);
         }
     }
 
@@ -124,6 +95,20 @@ public class MainWindow extends BorderPane {
     // ==========================================
     //  内部工具
     // ==========================================
+
+    /**
+     * 正常提示页：告知用户面板在浏览器中
+     */
+    private VBox infoBox() {
+        Label titleLabel = new Label("服务管理面板已在浏览器中打开");
+        titleLabel.setStyle("-fx-font-size: 18px; -fx-text-fill: #69db7c; -fx-font-weight: bold;");
+        Label detailLabel = new Label(
+                "本窗口可以关闭，程序驻留托盘运行；\n再次双击桌面快捷方式会重新弹出浏览器。");
+        detailLabel.setStyle("-fx-text-fill: #909399;");
+        VBox box = new VBox(12, titleLabel, detailLabel);
+        box.setAlignment(Pos.CENTER);
+        return box;
+    }
 
     /**
      * 启动失败时的兜底提示框

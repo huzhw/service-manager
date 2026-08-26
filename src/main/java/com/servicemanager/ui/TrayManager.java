@@ -15,6 +15,13 @@ public class TrayManager {
     private MenuItem autoStartItem;
     private boolean running = true;
 
+    /** 托盘是否已成功挂载（App 靠它决定是否兜底显示主窗口） */
+    private static volatile boolean trayReady = false;
+
+    public static boolean isTrayReady() {
+        return trayReady;
+    }
+
     public TrayManager(MainWindow mainWindow) {
         this.mainWindow = mainWindow;
 
@@ -28,10 +35,14 @@ public class TrayManager {
 
         try {
             SystemTray.getSystemTray().add(trayIcon);
-            trayIcon.addActionListener(e -> {
+            trayReady = true;
+            trayIcon.addActionListener(e -> showMainWindow());
+            // 托盘就绪后再藏主窗口（无窗运行）；托盘初始化失败则保留窗口，程序永远可操作
+            Platform.runLater(() -> {
                 javafx.stage.Stage stage = (javafx.stage.Stage) mainWindow.getScene().getWindow();
-                stage.setIconified(false);
-                stage.toFront();
+                if (stage != null) {
+                    stage.hide();
+                }
             });
         } catch (AWTException e) {
             System.err.println("Tray add failed: " + e.getMessage());
@@ -42,11 +53,7 @@ public class TrayManager {
         PopupMenu menu = new PopupMenu();
 
         MenuItem showItem = new MenuItem("Show Panel");
-        showItem.addActionListener(e -> {
-            javafx.stage.Stage stage = (javafx.stage.Stage) mainWindow.getScene().getWindow();
-            stage.setIconified(false);
-            stage.toFront();
-        });
+        showItem.addActionListener(e -> showMainWindow());
         menu.add(showItem);
 
         menu.addSeparator();
@@ -73,6 +80,18 @@ public class TrayManager {
         menu.add(exitItem);
 
         return menu;
+    }
+
+    /**
+     * 显示主窗口（对隐藏/最小化状态都有效）
+     */
+    private void showMainWindow() {
+        javafx.stage.Stage stage = (javafx.stage.Stage) mainWindow.getScene().getWindow();
+        if (stage != null) {
+            stage.show();
+            stage.setIconified(false);
+            stage.toFront();
+        }
     }
 
     private void toggleAutoStart() {

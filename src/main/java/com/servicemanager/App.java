@@ -17,6 +17,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.ServerSocket;
+import java.net.Socket;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Properties;
 
@@ -96,8 +98,30 @@ public class App extends Application {
             com.servicemanager.ui.TrayManager tray = new com.servicemanager.ui.TrayManager(mainWindow);
         });
 
-        stage.setOnCloseRequest(e -> Platform.exit());
-        stage.show();
+        // 单实例唤醒监听：再次双击桌面快捷方式 → 重新弹出浏览器
+        startWakeListener(mainWindow);
+
+        // 点 X 只藏窗口（程序驻留托盘，面板在浏览器中）；彻底退出走托盘 Exit
+        stage.setOnCloseRequest(e -> {
+            e.consume();
+            stage.hide();
+        });
+        // 启动不显示主窗口：无窗驻留托盘（浏览器即面板）。
+        // 兜底：4 秒后托盘仍不可用才显示窗口，避免程序变"幽灵进程"失去控制入口
+        Thread fallback = new Thread(() -> {
+            try {
+                Thread.sleep(4000);
+            } catch (InterruptedException e) {
+                return;
+            }
+            Platform.runLater(() -> {
+                if (!com.servicemanager.ui.TrayManager.isTrayReady()) {
+                    stage.show();
+                }
+            });
+        }, "window-fallback");
+        fallback.setDaemon(true);
+        fallback.start();
     }
 
     @Override
@@ -196,7 +220,50 @@ public class App extends Application {
             lockSocket = new ServerSocket(SINGLE_INSTANCE_PORT);
             return true;
         } catch (IOException e) {
+            // 已有实例在跑：发唤醒信号让旧实例重新弹出浏览器，然后本进程静默退出；
+            // 信号也失败才弹提示兜底
+            if (sendWakeSignal()) {
+                System.exit(0);
+            }
+            JOptionPane.showMessageDialog(null,
+                    "服务管理面板已在运行中。",
+                    "提示", JOptionPane.INFORMATION_MESSAGE);
+            System.exit(0);
             return false;
         }
+    }
+
+    /**
+     * 唤醒已运行实例：往单实例锁端口发 SHOW 指令，
+     * 旧实例收到后会用当前有效地址重新打开浏览器面板
+     */
+    private static boolean sendWakeSignal() {
+        try (Socket s = new Socket("127.0.0.1", SINGLE_INSTANCE_PORT);
+             OutputStream out = s.getOutputStream()) {
+            out.write("SHOW".getBytes(StandardCharsets.UTF_8));
+            out.flush();
+            return true;
+        } catch (IOException e) {
+            return false;
+        }
+    }
+
+    /**
+     * 常驻监听锁端口：收到 SHOW 即在 FX 线程重新弹出浏览器
+     */
+    private static void startWakeListener(MainWindow mainWindow) {
+        Thread t = new Thread(() -> {
+            while (lockSocket != null && !lockSocket.isClosed()) {
+                try (Socket s = lockSocket.accept()) {
+                    // 任何连接即视为唤醒信号（锁端口只有本程序启动器会碰），
+                    // 免去读字节比对，秒级响应
+                    Platform.runLater(mainWindow::showInBrowser);
+                } catch (IOException e) {
+                    break; // 退出时锁端口被关闭
+                }
+            }
+        }, "single-instance-wake");
+        t.setDaemon(true);
+        t.start();
     }
 }
