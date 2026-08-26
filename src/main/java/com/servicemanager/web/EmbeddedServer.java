@@ -1,5 +1,6 @@
 package com.servicemanager.web;
 
+import com.servicemanager.util.LogManager;
 import com.servicemanager.web.api.FileAssocApi;
 import com.servicemanager.web.api.LogsApi;
 import com.servicemanager.web.api.PortsApi;
@@ -22,13 +23,13 @@ import java.util.concurrent.Executors;
  * 安全约束：
  * ① 仅绑定 127.0.0.1 回环地址，局域网不可达
  * ② /api/* 全部要求 token（启动时随机生成，见控制台/日志），静态资源不校验
- * ③ 端口在 38080~38099 间顺延选取，全部占用则启动失败
+ * ③ 端口在 46815~46834 间顺延选取，全部占用则启动失败
  */
 public class EmbeddedServer {
 
-    /** 端口扫描起点（5 位数冷门段，避开 Windows 临时端口区间 49152+） */
-    private static final int PORT_START = 38080;
-    private static final int PORT_END = 38099;
+    /** 端口扫描起点（5 位数冷门段，避开 Windows 临时端口区间 49152+ 与常见软件端口） */
+    private static final int PORT_START = 46815;
+    private static final int PORT_END = 46834;
 
     private HttpServer server;
     private int port;
@@ -102,6 +103,9 @@ public class EmbeddedServer {
             String path = ex.getRequestURI().getPath();
             if (path.startsWith("/api/")) {
                 if (!tokenValid(ex)) {
+                    // 401 留痕：静默拒绝会让"点击无效"无法定位（旧页面/旧实例残留的典型特征）
+                    LogManager.log("⚠ API 401: " + ex.getRequestMethod() + " " + path
+                            + "（token 不匹配）");
                     HttpUtil.error(ex, 401, "token 无效，请从托盘重新打开面板");
                     return;
                 }
